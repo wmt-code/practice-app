@@ -35,6 +35,8 @@ public class UserProgress implements Serializable {
 
     private Integer completedQuestions;
 
+    private Integer correctCount;
+
     private Integer totalQuestions;
 
     private LocalDateTime lastUpdated;

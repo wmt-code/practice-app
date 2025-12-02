@@ -1,6 +1,7 @@
 package com.tb.practiceapp.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.tb.practiceapp.model.dto.category.CategoryRequest;
 import com.tb.practiceapp.model.entity.Category;
 
 /**
@@ -13,4 +14,9 @@ import com.tb.practiceapp.model.entity.Category;
  */
 public interface ICategoryService extends IService<Category> {
 
+    Category createCategory(CategoryRequest request);
+
+    Category updateCategory(Long id, CategoryRequest request);
+
+    void deleteCategory(Long id);
 }

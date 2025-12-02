@@ -1,0 +1,25 @@
+package com.tb.practiceapp.model.dto.question;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+@Data
+public class QuestionCreateRequest {
+    @NotBlank(message = "题目标题不能为空")
+    private String title;
+
+    @NotBlank(message = "题目类型不能为空")
+    private String type;
+
+    @NotBlank(message = "正确答案不能为空")
+    private String answer;
+
+    private String options;
+
+    @NotNull(message = "分类不能为空")
+    private Long categoryId;
+
+    @NotBlank(message = "难度不能为空")
+    private String difficulty;
+}

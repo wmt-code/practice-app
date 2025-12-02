@@ -1,6 +1,8 @@
 package com.tb.practiceapp.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.tb.practiceapp.model.dto.user.PasswordUpdateRequest;
+import com.tb.practiceapp.model.dto.user.UserProfileUpdateRequest;
 import com.tb.practiceapp.model.entity.User;
 
 /**
@@ -13,4 +15,15 @@ import com.tb.practiceapp.model.entity.User;
  */
 public interface IUserService extends IService<User> {
 
+    User findByOpenId(String openId);
+
+    User findByUsername(String username);
+
+    User ensureUserFromWechat(String openId, String unionId, String accessToken, String refreshToken, Integer expiresIn, String nickname, String avatar);
+
+    User getByIdCached(Long userId);
+
+    void updateProfile(Long userId, UserProfileUpdateRequest request);
+
+    void updatePassword(Long userId, PasswordUpdateRequest request);
 }

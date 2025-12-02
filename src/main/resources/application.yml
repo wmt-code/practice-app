@@ -12,7 +12,30 @@ spring:
       host: 127.0.0.1
       port: 6379
       database: 0
+  cache:
+    type: redis
 server:
   servlet:
     context-path: /api
   port: 8888
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET:local-dev-secret-change-me-please-32bytes}
+    access-token-minutes: ${APP_JWT_ACCESS_MINUTES:120}
+    refresh-token-minutes: ${APP_JWT_REFRESH_MINUTES:43200}
+
+wechat:
+  app-id: ${WECHAT_APP_ID:}
+  app-secret: ${WECHAT_APP_SECRET:}
+  grant-type: authorization_code
+  mock-enabled: true
+  mock-open-id: demo-openid
+
+logging:
+  level:
+    com.tb.practiceapp: INFO

@@ -2,6 +2,7 @@ package com.tb.practiceapp.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.tb.practiceapp.model.entity.UserWrongAnswers;
+import com.tb.practiceapp.model.entity.Question;
 
 /**
  * <p>
@@ -13,4 +14,5 @@ import com.tb.practiceapp.model.entity.UserWrongAnswers;
  */
 public interface IUserWrongAnswersService extends IService<UserWrongAnswers> {
 
+    void syncWrongAnswer(Long userId, Question question, String userAnswer, boolean correct);
 }

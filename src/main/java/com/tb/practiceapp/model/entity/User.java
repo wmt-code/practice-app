@@ -1,5 +1,6 @@
 package com.tb.practiceapp.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -31,11 +32,17 @@ public class User implements Serializable {
 
     private String username;
 
+    @JsonIgnore
     private String password;
 
     private String nickname;
 
     private String avatar;
+
+    /**
+     * Role values: ADMIN or USER.
+     */
+    private String role;
 
     private String email;
 
@@ -45,8 +52,10 @@ public class User implements Serializable {
 
     private String unionid;
 
+    @JsonIgnore
     private String accessToken;
 
+    @JsonIgnore
     private String refreshToken;
 
     private Integer expiresIn;
