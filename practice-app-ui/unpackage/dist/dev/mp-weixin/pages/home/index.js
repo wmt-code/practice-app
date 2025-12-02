@@ -117,7 +117,7 @@ const _sfc_main = {
         }),
         s: common_vendor.p({
           title: "推荐题目",
-          ["sub-title"]: "从未做过的题里挑选",
+          ["sub-title"]: "从未做过的题目里精选",
           type: "line",
           padding: true
         }),
