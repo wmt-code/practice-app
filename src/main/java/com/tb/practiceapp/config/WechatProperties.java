@@ -8,8 +8,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Setter
 @ConfigurationProperties(prefix = "wechat")
 public class WechatProperties {
-    private String appId = "wxb5f729bc7845d8b7";
-    private String appSecret = "9bf0515c0aa57db9719258213785d986";
+    private String appId;
+    private String appSecret;
     private String grantType = "authorization_code";
     private boolean mockEnabled = false;
     private String mockOpenId = "mock-openid";

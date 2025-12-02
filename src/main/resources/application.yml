@@ -30,8 +30,8 @@ app:
     refresh-token-minutes: ${APP_JWT_REFRESH_MINUTES:43200}
 
 wechat:
-  app-id: ${WECHAT_APP_ID:}
-  app-secret: ${WECHAT_APP_SECRET:}
+  app-id: ${WECHAT_APP_ID:wxb5f729bc7845d8b7}
+  app-secret: ${WECHAT_APP_SECRET:9bf0515c0aa57db9719258213785d986}
   grant-type: authorization_code
   mock-enabled: true
   mock-open-id: demo-openid
