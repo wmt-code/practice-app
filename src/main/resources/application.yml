@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: practice-app
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: root
+    url: jdbc:mysql://127.0.0.1:3306/practice_app
+  data:
+    redis:
+      password: redis
+      host: 127.0.0.1
+      port: 6379
+      database: 0
+server:
+  servlet:
+    context-path: /api
+  port: 8888
