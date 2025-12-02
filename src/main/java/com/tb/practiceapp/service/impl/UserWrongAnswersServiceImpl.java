@@ -1,9 +1,9 @@
 package com.tb.practiceapp.service.impl;
 
-import org.py.mymodule.submodule.entity.UserWrongAnswers;
-import org.py.mymodule.submodule.mapper.UserWrongAnswersMapper;
-import org.py.mymodule.submodule.service.IUserWrongAnswersService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.tb.practiceapp.mapper.UserWrongAnswersMapper;
+import com.tb.practiceapp.model.entity.UserWrongAnswers;
+import com.tb.practiceapp.service.IUserWrongAnswersService;
 import org.springframework.stereotype.Service;
 
 /**

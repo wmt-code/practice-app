@@ -1,9 +1,9 @@
 package com.tb.practiceapp.service.impl;
 
-import org.py.mymodule.submodule.entity.UserFavorites;
-import org.py.mymodule.submodule.mapper.UserFavoritesMapper;
-import org.py.mymodule.submodule.service.IUserFavoritesService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.tb.practiceapp.mapper.UserFavoritesMapper;
+import com.tb.practiceapp.model.entity.UserFavorites;
+import com.tb.practiceapp.service.IUserFavoritesService;
 import org.springframework.stereotype.Service;
 
 /**

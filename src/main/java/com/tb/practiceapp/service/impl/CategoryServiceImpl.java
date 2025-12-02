@@ -1,14 +1,14 @@
 package com.tb.practiceapp.service.impl;
 
-import org.py.mymodule.submodule.entity.Category;
-import org.py.mymodule.submodule.mapper.CategoryMapper;
-import org.py.mymodule.submodule.service.ICategoryService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.tb.practiceapp.mapper.CategoryMapper;
+import com.tb.practiceapp.model.entity.Category;
+import com.tb.practiceapp.service.ICategoryService;
 import org.springframework.stereotype.Service;
 
 /**
  * <p>
- *  服务实现类
+ * 服务实现类
  * </p>
  *
  * @author wmt

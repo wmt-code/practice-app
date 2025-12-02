@@ -1,7 +1,7 @@
 package com.tb.practiceapp.service;
 
-import org.py.mymodule.submodule.entity.UserProgress;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.tb.practiceapp.model.entity.UserProgress;
 
 /**
  * <p>

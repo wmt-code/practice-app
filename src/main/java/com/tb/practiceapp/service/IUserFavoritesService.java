@@ -1,7 +1,7 @@
 package com.tb.practiceapp.service;
 
-import org.py.mymodule.submodule.entity.UserFavorites;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.tb.practiceapp.model.entity.UserFavorites;
 
 /**
  * <p>

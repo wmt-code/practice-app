@@ -1,9 +1,8 @@
 package com.tb.practiceapp.service.impl;
 
-import org.py.mymodule.submodule.entity.User;
-import org.py.mymodule.submodule.mapper.UserMapper;
-import org.py.mymodule.submodule.service.IUserService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.tb.practiceapp.mapper.UserMapper;
+import com.tb.practiceapp.service.IUserService;
 import org.springframework.stereotype.Service;
 
 /**

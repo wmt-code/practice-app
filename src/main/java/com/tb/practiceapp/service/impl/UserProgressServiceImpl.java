@@ -1,9 +1,9 @@
 package com.tb.practiceapp.service.impl;
 
-import org.py.mymodule.submodule.entity.UserProgress;
-import org.py.mymodule.submodule.mapper.UserProgressMapper;
-import org.py.mymodule.submodule.service.IUserProgressService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.tb.practiceapp.mapper.UserProgressMapper;
+import com.tb.practiceapp.model.entity.UserProgress;
+import com.tb.practiceapp.service.IUserProgressService;
 import org.springframework.stereotype.Service;
 
 /**
