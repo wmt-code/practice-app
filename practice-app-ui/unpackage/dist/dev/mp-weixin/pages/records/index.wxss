@@ -1,0 +1,40 @@
+/* 水平间距 */
+/* 水平间距 */
+.page.data-v-f1512143 {
+  padding: 20rpx;
+}
+.filter.data-v-f1512143 {
+  margin-bottom: 16rpx;
+}
+.picker.data-v-f1512143 {
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+.record-card.data-v-f1512143 {
+  margin-bottom: 14rpx;
+}
+.row.data-v-f1512143 {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin: 6rpx 0;
+  flex-wrap: wrap;
+}
+.muted.data-v-f1512143 {
+  color: #6b7280;
+  font-size: 24rpx;
+}
+.answer-row.data-v-f1512143 {
+  display: flex;
+  gap: 10rpx;
+  margin-top: 4rpx;
+  color: #1f2937;
+}
+.empty.data-v-f1512143 {
+  padding: 40rpx;
+  text-align: center;
+}

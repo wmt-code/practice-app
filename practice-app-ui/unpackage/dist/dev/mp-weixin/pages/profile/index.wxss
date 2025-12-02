@@ -1,0 +1,63 @@
+/* 水平间距 */
+/* 水平间距 */
+.page.data-v-201c0da5 {
+  padding: 20rpx;
+}
+.profile-card.data-v-201c0da5 {
+  background: linear-gradient(135deg, #1f2937, #111827);
+  color: #fff;
+}
+.profile-header.data-v-201c0da5 {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.avatar.data-v-201c0da5 {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+}
+.info.data-v-201c0da5 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.nickname.data-v-201c0da5 {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+.row.data-v-201c0da5 {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+.login-btn.data-v-201c0da5 {
+  background: #2563eb;
+  color: #fff;
+}
+.primary-btn.data-v-201c0da5 {
+  width: 100%;
+  margin-top: 12rpx;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+.ghost-btn.data-v-201c0da5 {
+  width: 100%;
+  margin-top: 12rpx;
+  background: #f3f4f6;
+  color: #1f2937;
+}
+.stats-row.data-v-201c0da5 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12rpx;
+  text-align: center;
+}
+.stat-num.data-v-201c0da5 {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+.muted.data-v-201c0da5 {
+  color: #6b7280;
+}

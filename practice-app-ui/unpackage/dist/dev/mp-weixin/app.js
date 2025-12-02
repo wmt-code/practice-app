@@ -2,18 +2,21 @@
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const common_vendor = require("./common/vendor.js");
 if (!Math) {
-  "./pages/index/index.js";
+  "./pages/home/index.js";
+  "./pages/questions/index.js";
+  "./pages/questions/detail.js";
+  "./pages/records/index.js";
+  "./pages/profile/index.js";
 }
 const _sfc_main = {
-  onLaunch: function() {
-    common_vendor.index.__f__("warn", "at App.vue:4", "当前组件仅支持 uni_modules 目录结构 ，请升级 HBuilderX 到 3.1.0 版本以上！");
-    common_vendor.index.__f__("log", "at App.vue:5", "App Launch");
+  onLaunch() {
+    common_vendor.index.__f__("log", "at App.vue:4", "Practice App UI launched");
   },
-  onShow: function() {
-    common_vendor.index.__f__("log", "at App.vue:8", "App Show");
+  onShow() {
+    common_vendor.index.__f__("log", "at App.vue:7", "Practice App UI shown");
   },
-  onHide: function() {
-    common_vendor.index.__f__("log", "at App.vue:11", "App Hide");
+  onHide() {
+    common_vendor.index.__f__("log", "at App.vue:10", "Practice App UI hidden");
   }
 };
 function createApp() {

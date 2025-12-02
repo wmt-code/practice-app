@@ -1,0 +1,44 @@
+/* 水平间距 */
+/* 水平间距 */
+.page.data-v-29918ac5 {
+  padding: 20rpx;
+}
+.category-scroll.data-v-29918ac5 {
+  white-space: nowrap;
+  margin: 16rpx 0;
+}
+.chip.data-v-29918ac5 {
+  display: inline-flex;
+  align-items: center;
+  padding: 12rpx 28rpx;
+  margin-right: 12rpx;
+  border-radius: 40rpx;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 26rpx;
+  border: 1rpx solid transparent;
+}
+.chip.active.data-v-29918ac5 {
+  background: #e0ecff;
+  color: #1d4ed8;
+  border-color: #2563eb;
+}
+.list-wrapper.data-v-29918ac5 {
+  background: #fff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 12rpx 30rpx rgba(31, 56, 88, 0.06);
+}
+.footer.data-v-29918ac5 {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+.muted.data-v-29918ac5 {
+  color: #6b7280;
+  font-size: 24rpx;
+}
+.empty.data-v-29918ac5 {
+  padding: 36rpx;
+  text-align: center;
+}
