@@ -1,161 +1,245 @@
 <template>
   <view class="page">
-    <uni-search-bar
-      v-model="keyword"
-      placeholder="搜索题目关键词"
-      cancel-button="always"
-      clear-button="always"
-      @confirm="loadQuestions"
-      @cancel="clearSearch"
-      @clear="clearSearch"
-    />
-
-    <scroll-view scroll-x class="category-scroll" show-scrollbar="false">
-      <view
-        v-for="cat in categories"
-        :key="cat.id || 'all'"
-        class="chip"
-        :class="{ active: cat.id === selectedCategory }"
-        @tap="switchCategory(cat.id)"
-      >
-        <text>{{ cat.name }}</text>
+    <view class="header">
+      <view class="title-wrap">
+        <text class="title">题库</text>
+        <text class="subtitle">按分类浏览，快速进入练习</text>
       </view>
-    </scroll-view>
+      <uni-easyinput
+        v-model="keyword"
+        placeholder="搜索想练习的考试或子分类"
+        prefixIcon="search"
+        clearable
+        @confirm="handleSearch"
+        @clear="clearSearch"
+      />
+    </view>
 
-    <view class="list-wrapper">
-      <uni-list>
-        <uni-list-item
-          v-for="item in questions"
-          :key="item.id"
-          :title="item.title"
-          clickable
-          :note="getCategoryName(item.categoryId)"
-          @click="goDetail(item.id)"
+    <view class="layout">
+      <scroll-view scroll-y class="side" show-scrollbar="false">
+        <view
+          v-for="parent in categoryTree"
+          :key="parent.id"
+          class="side-item"
+          :class="{ active: parent.id === selectedParent }"
+          @tap="switchParent(parent.id)"
         >
-          <template #footer>
-            <view class="footer">
-              <uni-tag :text="renderType(item.type)" size="mini" type="primary" />
-              <text class="muted">分值 {{ item.score }}</text>
-              <text class="muted">预计 {{ item.duration }}s</text>
+          <text class="side-text">{{ parent.name }}</text>
+        </view>
+      </scroll-view>
+
+      <scroll-view scroll-y class="content" show-scrollbar="false">
+        <view v-if="filteredChildren.length" class="card-list">
+          <view
+            v-for="item in filteredChildren"
+            :key="item.id"
+            class="sub-card"
+            @tap="goCategory(item)"
+          >
+            <view class="card-header">
+              <view class="name">
+                <text class="sub-name">{{ item.name }}</text>
+                <uni-tag v-if="item.badge" :text="item.badge" type="warning" size="mini" />
+              </view>
+              <uni-icons type="arrowright" color="#9ca3af" size="20" />
             </view>
-          </template>
-        </uni-list-item>
-      </uni-list>
-      <view v-if="!questions.length" class="empty">
-        <text class="muted">暂无题目，换个分类或关键词试试</text>
-      </view>
+            <view class="desc">{{ item.description || '点击进入详情与练习' }}</view>
+            <view class="meta-row">
+              <text class="muted">题量 {{ item.questionCount || 0 }}</text>
+              <text class="muted">最近更新 {{ item.updatedAt || '--' }}</text>
+            </view>
+          </view>
+        </view>
+        <view v-else class="empty">
+          <text class="muted">没有匹配的分类，换个关键词试试</text>
+        </view>
+      </scroll-view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { onPullDownRefresh, onShow } from '@dcloudio/uni-app';
-import { fetchCategories, fetchQuestions } from '@/api/mock.js';
+import { fetchCategoryTree } from '@/api/mock.js';
 
-const categories = ref([{ id: '', name: '全部' }]);
-const selectedCategory = ref('');
-const questions = ref([]);
+const categoryTree = ref([]);
+const selectedParent = ref('');
 const keyword = ref('');
 
+const childrenOfParent = computed(() => {
+  const parent = categoryTree.value.find((p) => p.id === selectedParent.value);
+  return parent ? parent.children : [];
+});
+
+const filteredChildren = computed(() => {
+  const kw = keyword.value.trim().toLowerCase();
+  if (!kw) return childrenOfParent.value;
+  return childrenOfParent.value.filter(
+    (item) =>
+      item.name.toLowerCase().includes(kw) ||
+      (item.description || '').toLowerCase().includes(kw),
+  );
+});
+
 const loadCategories = async () => {
-  const list = await fetchCategories();
-  categories.value = [{ id: '', name: '全部' }, ...list];
+  const list = await fetchCategoryTree();
+  categoryTree.value = list;
+  if (!selectedParent.value && list.length) {
+    selectedParent.value = list[0].id;
+  }
 };
 
-const loadQuestions = async () => {
-  const list = await fetchQuestions({
-    categoryId: selectedCategory.value,
-    keyword: keyword.value,
-  });
-  questions.value = list;
+const switchParent = (id) => {
+  selectedParent.value = id;
 };
 
-const switchCategory = (id) => {
-  selectedCategory.value = id;
-  loadQuestions();
+const handleSearch = () => {
+  // computed handles filtering
 };
 
 const clearSearch = () => {
   keyword.value = '';
-  loadQuestions();
 };
 
-const goDetail = (id) => {
-  uni.navigateTo({ url: `/pages/questions/detail?id=${id}` });
-};
-
-const renderType = (type) => {
-  if (type === 'multiple') return '多选';
-  if (type === 'truefalse') return '判断';
-  return '单选';
-};
-
-const getCategoryName = (id) => {
-  const found = categories.value.find((c) => c.id === id);
-  return found ? found.name : '未分类';
+const goCategory = (item) => {
+  uni.navigateTo({
+    url: `/pages/questions/category?categoryId=${item.id}`,
+  });
 };
 
 onShow(() => {
   loadCategories();
-  loadQuestions();
 });
 
 onPullDownRefresh(async () => {
   await loadCategories();
-  await loadQuestions();
   uni.stopPullDownRefresh();
 });
 </script>
 
 <style lang="scss" scoped>
 .page {
-  padding: 20rpx;
+  padding: 16rpx 16rpx 0;
+  min-height: 100vh;
 }
 
-.category-scroll {
-  white-space: nowrap;
-  margin: 16rpx 0;
+.header {
+  padding: 16rpx;
+  background: #ffffff;
+  border-radius: 18rpx;
+  box-shadow: 0 10rpx 30rpx rgba(31, 56, 88, 0.06);
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 12rpx 28rpx;
-  margin-right: 12rpx;
-  border-radius: 40rpx;
-  background: #f3f4f6;
-  color: #374151;
-  font-size: 26rpx;
-  border: 1rpx solid transparent;
+.title-wrap {
+  margin-bottom: 12rpx;
 }
 
-.chip.active {
-  background: #e0ecff;
-  color: #1d4ed8;
-  border-color: #2563eb;
+.title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #111827;
 }
 
-.list-wrapper {
-  background: #fff;
-  border-radius: 16rpx;
-  overflow: hidden;
-  box-shadow: 0 12rpx 30rpx rgba(31, 56, 88, 0.06);
-}
-
-.footer {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-}
-
-.muted {
+.subtitle {
+  display: block;
+  margin-top: 6rpx;
   color: #6b7280;
   font-size: 24rpx;
 }
 
+.layout {
+  display: flex;
+  margin-top: 16rpx;
+  height: calc(100vh - 200rpx);
+}
+
+.side {
+  width: 210rpx;
+  background: #f5f7fb;
+  border-radius: 16rpx;
+  margin-right: 12rpx;
+  padding: 8rpx 0;
+}
+
+.side-item {
+  padding: 18rpx 20rpx;
+  color: #374151;
+  border-left: 8rpx solid transparent;
+}
+
+.side-item.active {
+  background: #e0ecff;
+  color: #1d4ed8;
+  border-color: #2563eb;
+  font-weight: 700;
+}
+
+.side-text {
+  font-size: 26rpx;
+}
+
+.content {
+  flex: 1;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 12rpx;
+  box-shadow: 0 12rpx 30rpx rgba(31, 56, 88, 0.05);
+}
+
+.card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300rpx, 1fr));
+  gap: 12rpx;
+}
+
+.sub-card {
+  padding: 18rpx;
+  border-radius: 14rpx;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border: 1rpx solid #e5e7eb;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.sub-name {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.desc {
+  margin: 8rpx 0 12rpx;
+  color: #4b5563;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #6b7280;
+  font-size: 24rpx;
+}
+
+.muted {
+  color: #6b7280;
+}
+
 .empty {
-  padding: 36rpx;
+  padding: 40rpx;
   text-align: center;
+  color: #6b7280;
 }
 </style>

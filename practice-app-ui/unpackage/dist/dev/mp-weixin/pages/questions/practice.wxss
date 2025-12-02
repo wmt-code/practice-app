@@ -1,0 +1,142 @@
+/* 水平间距 */
+/* 水平间距 */
+.page.data-v-1e7fffe1 {
+  min-height: 100vh;
+  padding: 16rpx;
+  background: #f7f8fb;
+}
+.header.data-v-1e7fffe1 {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 14rpx;
+  box-shadow: 0 12rpx 30rpx rgba(31, 56, 88, 0.06);
+}
+.title-row.data-v-1e7fffe1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.breadcrumb.data-v-1e7fffe1 {
+  color: #6b7280;
+  font-size: 24rpx;
+}
+.title.data-v-1e7fffe1 {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  font-size: 32rpx;
+  font-weight: 700;
+  margin-top: 4rpx;
+}
+.progress.data-v-1e7fffe1 {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+}
+.muted.data-v-1e7fffe1 {
+  color: #6b7280;
+  font-size: 24rpx;
+}
+.count.data-v-1e7fffe1 {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #111827;
+}
+.swiper.data-v-1e7fffe1 {
+  margin-top: 12rpx;
+  height: calc(100vh - 220rpx);
+}
+.card.data-v-1e7fffe1 {
+  background: #ffffff;
+  border-radius: 18rpx;
+  padding: 20rpx;
+  box-shadow: 0 14rpx 34rpx rgba(31, 56, 88, 0.08);
+  height: calc(100% - 20rpx);
+  display: flex;
+  flex-direction: column;
+}
+.question-title.data-v-1e7fffe1 {
+  display: flex;
+  gap: 10rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #111827;
+}
+.type-tag.data-v-1e7fffe1 {
+  padding: 6rpx 12rpx;
+  background: #e0ecff;
+  color: #1d4ed8;
+  border-radius: 10rpx;
+  font-size: 24rpx;
+}
+.options.data-v-1e7fffe1 {
+  margin-top: 12rpx;
+  flex: 1;
+}
+.option.data-v-1e7fffe1 {
+  display: flex;
+  align-items: center;
+  padding: 14rpx 10rpx;
+  border-radius: 12rpx;
+  background: #f9fafb;
+  margin-bottom: 10rpx;
+}
+.opt-text.data-v-1e7fffe1 {
+  margin-left: 10rpx;
+  font-size: 28rpx;
+  color: #1f2937;
+}
+.action-row.data-v-1e7fffe1 {
+  margin-top: 10rpx;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+.submit.data-v-1e7fffe1 {
+  flex: 1;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  border: none;
+}
+.analysis.data-v-1e7fffe1 {
+  margin-top: 12rpx;
+  padding: 14rpx;
+  border-radius: 12rpx;
+  background: #f9fafb;
+}
+.analysis.success.data-v-1e7fffe1 {
+  border: 1rpx solid #a7f3d0;
+}
+.analysis.danger.data-v-1e7fffe1 {
+  border: 1rpx solid #fecdd3;
+}
+.result.data-v-1e7fffe1 {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.result-text.data-v-1e7fffe1 {
+  font-weight: 600;
+}
+.answer.data-v-1e7fffe1 {
+  margin-top: 8rpx;
+}
+.answer-text.data-v-1e7fffe1 {
+  font-weight: 600;
+  color: #111827;
+}
+.explain.data-v-1e7fffe1 {
+  margin-top: 6rpx;
+  color: #1f2937;
+  line-height: 1.5;
+}
+.swipe-tip.data-v-1e7fffe1 {
+  margin-top: 6rpx;
+  color: #ef4444;
+  font-size: 24rpx;
+}
+.empty.data-v-1e7fffe1 {
+  margin-top: 40rpx;
+  text-align: center;
+  color: #6b7280;
+}

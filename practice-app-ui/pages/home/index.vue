@@ -5,40 +5,39 @@
         <image :src="user.avatar || '/static/uni.png'" class="avatar" mode="aspectFill" />
         <view class="hero-info">
           <view class="title-row">
-            <text class="nickname">{{ user.nickname || '未登录' }}</text>
-            <uni-badge v-if="user.loggedIn" text="已登录" type="success" />
+            <text class="nickname">{{ user.nickname || '鏈櫥褰� }}</text>
+            <uni-badge v-if="user.loggedIn" text="宸茬櫥褰� type="success" />
           </view>
           <view class="meta">
-            <uni-badge text="积分" type="primary" class="mr-8" />
+            <uni-badge text="绉垎" type="primary" class="mr-8" />
             <text class="meta-text">{{ user.points || 0 }}</text>
-            <text class="meta-text">· 已完成 {{ progress.answeredQuestions }}/{{ progress.totalQuestions }}</text>
+            <text class="meta-text">路 宸插畬鎴�{{ progress.answeredQuestions }}/{{ progress.totalQuestions }}</text>
           </view>
         </view>
         <button v-if="!user.loggedIn" class="login-btn" size="mini" type="primary" @tap="goProfile">
-          去登录
-        </button>
+          鍘荤櫥褰�        </button>
       </view>
       <view class="progress-block">
         <view class="progress-header">
-          <text class="muted">学习进度</text>
-          <text class="muted">正确率 {{ progress.correctRate || 0 }}%</text>
+          <text class="muted">瀛︿範杩涘害</text>
+          <text class="muted">姝ｇ‘鐜�{{ progress.correctRate || 0 }}%</text>
         </view>
         <progress :percent="progress.percent || 0" active stroke-width="8" />
         <view class="progress-footer">
-          <text class="muted">已做 {{ progress.answeredQuestions }} / {{ progress.totalQuestions }}</text>
-          <text class="muted">当前积分 {{ user.points || 0 }}</text>
+          <text class="muted">宸插仛 {{ progress.answeredQuestions }} / {{ progress.totalQuestions }}</text>
+          <text class="muted">褰撳墠绉垎 {{ user.points || 0 }}</text>
         </view>
       </view>
     </uni-card>
 
-    <uni-section title="分类进度" type="line" padding />
+    <uni-section title="鍒嗙被杩涘害" type="line" padding />
     <view class="category-grid">
       <view v-for="cat in progress.categories" :key="cat.id" class="section-card">
         <view class="row">
           <text class="cat-name">{{ cat.name }}</text>
           <uni-badge :text="cat.correct + '/' + cat.total" type="primary" />
         </view>
-        <text class="muted">正确率 {{ cat.correctRate }}%</text>
+        <text class="muted">姝ｇ‘鐜�{{ cat.correctRate }}%</text>
         <progress
           :percent="cat.total ? Math.round((cat.answered / cat.total) * 100) : 0"
           active
@@ -47,7 +46,7 @@
       </view>
     </view>
 
-    <uni-section title="推荐题目" sub-title="从未做过的题里挑选" type="line" padding />
+    <uni-section title="鎺ㄨ崘棰樼洰" sub-title="浠庢湭鍋氳繃鐨勯閲屾寫閫� type="line" padding />
     <view v-if="recommended.length">
       <uni-card
         v-for="item in recommended"
@@ -60,16 +59,16 @@
         <view class="tag-row">
           <uni-tag :text="renderType(item.type)" size="mini" type="primary" />
           <uni-tag :text="getCategoryName(item.categoryId)" size="mini" type="success" />
-          <text class="muted ml-auto">分值 {{ item.score }}</text>
+          <text class="muted ml-auto">鍒嗗��{{ item.score }}</text>
         </view>
       </uni-card>
     </view>
     <view v-else class="empty">
-      <text class="muted">暂无推荐题目，先去题库看看吧～</text>
+      <text class="muted">鏆傛棤鎺ㄨ崘棰樼洰锛屽厛鍘婚搴撶湅鐪嬪惂锝�/text>
     </view>
 
     <view class="cta">
-      <button type="primary" class="primary-btn" @tap="goQuestionBank">进入题库</button>
+      <button type="primary" class="primary-btn" @tap="goQuestionBank">杩涘叆棰樺簱</button>
     </view>
   </view>
 </template>
@@ -109,12 +108,12 @@ const loadData = async () => {
 };
 
 const renderType = (type) => {
-  if (type === 'multiple') return '多选';
-  if (type === 'truefalse') return '判断';
-  return '单选';
+  if (type === 'multiple') return '澶氶��;
+  if (type === 'truefalse') return '鍒ゆ柇';
+  return '鍗曢��;
 };
 
-const getCategoryName = (id) => categories.value.find((c) => c.id === id)?.name || '未分类';
+const getCategoryName = (id) => categories.value.find((c) => c.id === id)?.name || '鏈垎绫�;
 
 const goQuestionBank = () => {
   uni.switchTab({ url: '/pages/questions/index' });

@@ -4,6 +4,8 @@ const common_vendor = require("./common/vendor.js");
 if (!Math) {
   "./pages/home/index.js";
   "./pages/questions/index.js";
+  "./pages/questions/category.js";
+  "./pages/questions/practice.js";
   "./pages/questions/detail.js";
   "./pages/records/index.js";
   "./pages/profile/index.js";

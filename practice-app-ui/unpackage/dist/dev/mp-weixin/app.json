@@ -2,6 +2,8 @@
   "pages": [
     "pages/home/index",
     "pages/questions/index",
+    "pages/questions/category",
+    "pages/questions/practice",
     "pages/questions/detail",
     "pages/records/index",
     "pages/profile/index"

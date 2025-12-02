@@ -80,8 +80,8 @@ const _sfc_main = {
             d: common_vendor.t(item.spentSeconds),
             e: common_vendor.t(formatTime(item.answeredAt)),
             f: common_vendor.t(getCategoryName((_a = item.question) == null ? void 0 : _a.categoryId)),
-            g: common_vendor.t(item.chosen.join("、") || "-"),
-            h: common_vendor.t((((_b = item.question) == null ? void 0 : _b.answer) || []).join("、")),
+            g: common_vendor.t(item.chosen.join(", ") || "-"),
+            h: common_vendor.t((((_b = item.question) == null ? void 0 : _b.answer) || []).join(", ")),
             i: item.id,
             j: "f1512143-0-" + i0,
             k: common_vendor.p({

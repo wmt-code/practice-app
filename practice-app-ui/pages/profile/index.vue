@@ -39,7 +39,7 @@
         </view>
         <view class="stat">
           <text class="stat-num">{{ progress.totalQuestions }}</text>
-          <text class="muted">总题目</text>
+          <text class="muted">总题量</text>
         </view>
         <view class="stat">
           <text class="stat-num">{{ progress.correctRate }}%</text>
@@ -97,7 +97,6 @@ const loadData = async () => {
 const handleWeixinLogin = async () => {
   try {
     uni.showLoading({ title: '登录中' });
-    // 微信环境下可直接获取用户信息；H5/APP 仍返回模拟数据
     if (uni.login) {
       await new Promise((resolve) => {
         uni.login({

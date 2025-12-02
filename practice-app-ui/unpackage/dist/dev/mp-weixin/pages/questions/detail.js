@@ -140,7 +140,7 @@ const _sfc_main = {
         r: common_vendor.t(feedback.value.isCorrect ? "回答正确" : "回答错误"),
         s: feedback.value.isCorrect ? 1 : "",
         t: !feedback.value.isCorrect ? 1 : "",
-        v: common_vendor.t(feedback.value.correctAnswer.join("、")),
+        v: common_vendor.t(feedback.value.correctAnswer.join(", ")),
         w: common_vendor.t(feedback.value.explanation),
         x: feedback.value.progress
       }, feedback.value.progress ? {

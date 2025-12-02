@@ -13,6 +13,18 @@
       }
     },
     {
+      "path": "pages/questions/category",
+      "style": {
+        "navigationBarTitleText": "分类详情"
+      }
+    },
+    {
+      "path": "pages/questions/practice",
+      "style": {
+        "navigationBarTitleText": "练习"
+      }
+    },
+    {
       "path": "pages/questions/detail",
       "style": {
         "navigationBarTitleText": "题目详情"

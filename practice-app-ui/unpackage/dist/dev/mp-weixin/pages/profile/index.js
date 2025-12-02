@@ -70,7 +70,7 @@ const _sfc_main = {
         loadData();
         common_vendor.index.showToast({ title: "登录成功", icon: "success" });
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/profile/index.vue:120", err);
+        common_vendor.index.__f__("error", "at pages/profile/index.vue:119", err);
         common_vendor.index.showToast({ title: "登录失败，稍后再试", icon: "none" });
       } finally {
         common_vendor.index.hideLoading();

@@ -28,11 +28,11 @@
         </view>
         <view class="answer-row">
           <text class="muted">我的答案：</text>
-          <text>{{ item.chosen.join('、') || '-' }}</text>
+          <text>{{ item.chosen.join(', ') || '-' }}</text>
         </view>
         <view class="answer-row">
           <text class="muted">正确答案：</text>
-          <text>{{ (item.question?.answer || []).join('、') }}</text>
+          <text>{{ (item.question?.answer || []).join(', ') }}</text>
         </view>
       </uni-card>
     </view>
@@ -44,7 +44,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue';
 import { onPullDownRefresh, onShow } from '@dcloudio/uni-app';
 import { fetchCategories, fetchRecords } from '@/api/mock.js';
 

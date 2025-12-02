@@ -64,7 +64,7 @@
       </view>
       <view class="answer">
         <text class="muted">正确答案：</text>
-        <text class="answer-text">{{ feedback.correctAnswer.join('、') }}</text>
+        <text class="answer-text">{{ feedback.correctAnswer.join(', ') }}</text>
       </view>
       <view class="explain">
         <text class="muted">解析：</text>
