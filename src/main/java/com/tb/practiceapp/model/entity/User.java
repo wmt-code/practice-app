@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 
 /**
  * <p>
- * 
+ *
  * </p>
  *
  * @author wmt
@@ -27,7 +27,7 @@ public class User implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @TableId(value = "id", type = IdType.AUTO)
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;
 
     private String username;
@@ -51,6 +51,9 @@ public class User implements Serializable {
     private String openid;
 
     private String unionid;
+
+    @JsonIgnore
+    private String sessionKey;
 
     @JsonIgnore
     private String accessToken;

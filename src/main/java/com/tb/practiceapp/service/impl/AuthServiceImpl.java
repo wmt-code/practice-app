@@ -31,8 +31,7 @@ public class AuthServiceImpl implements AuthService {
     public LoginResponse loginWithWechat(WechatLoginRequest request) {
         WechatSession session = wechatClient.exchangeCode(request.getCode());
         User user = userService.ensureUserFromWechat(session.getOpenId(), session.getUnionId(),
-                session.getAccessToken(), session.getRefreshToken(), session.getExpiresIn(),
-                request.getNickname(), request.getAvatar());
+                session.getSessionKey(), session.getExpiresIn(), request.getNickname(), request.getAvatar());
         return toResponse(user);
     }
 

@@ -13,4 +13,5 @@ public class WechatProperties {
     private String grantType = "authorization_code";
     private boolean mockEnabled = false;
     private String mockOpenId = "mock-openid";
+    private String mockSessionKey = "mock-session-key";
 }

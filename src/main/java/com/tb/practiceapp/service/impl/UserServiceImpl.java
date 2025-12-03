@@ -44,12 +44,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     }
 
     @Override
-    public User ensureUserFromWechat(String openId, String unionId, String accessToken, String refreshToken, Integer expiresIn, String nickname, String avatar) {
+    public User ensureUserFromWechat(String openId, String unionId, String sessionKey, Integer expiresIn, String nickname, String avatar) {
         User existing = findByOpenId(openId);
         if (existing != null) {
             existing.setUnionid(unionId);
-            existing.setAccessToken(accessToken);
-            existing.setRefreshToken(refreshToken);
+            existing.setSessionKey(sessionKey);
+            existing.setAccessToken(null);
+            existing.setRefreshToken(null);
             existing.setExpiresIn(expiresIn);
             if (StringUtils.isNotBlank(nickname)) {
                 existing.setNickname(nickname);
@@ -64,8 +65,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         User user = new User();
         user.setOpenid(openId);
         user.setUnionid(unionId);
-        user.setAccessToken(accessToken);
-        user.setRefreshToken(refreshToken);
+        user.setSessionKey(sessionKey);
+        user.setAccessToken(null);
+        user.setRefreshToken(null);
         user.setExpiresIn(expiresIn);
         user.setNickname(StringUtils.defaultIfBlank(nickname, "学员"));
         user.setAvatar(avatar);

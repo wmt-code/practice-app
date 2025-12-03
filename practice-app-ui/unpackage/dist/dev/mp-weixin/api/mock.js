@@ -476,34 +476,6 @@ function buildProgress() {
 function delay(data, ms = 120) {
   return new Promise((resolve) => setTimeout(() => resolve(data), ms));
 }
-async function fetchCurrentUser() {
-  loadState();
-  return delay({ ...state.user });
-}
-async function loginWithWeixin(profile = {}) {
-  const nickname = profile.nickName || profile.nickname || "微信用户";
-  const avatar = profile.avatarUrl || profile.avatar || "/static/uni.png";
-  state.user = {
-    ...state.user,
-    id: `wx-${Date.now()}`,
-    nickname,
-    avatar,
-    points: Math.max(state.user.points, 10),
-    loggedIn: true
-  };
-  persist();
-  return delay({ ...state.user });
-}
-async function updateUserProfile(payload = {}) {
-  state.user = {
-    ...state.user,
-    nickname: payload.nickname || state.user.nickname,
-    avatar: payload.avatar || state.user.avatar,
-    points: state.user.points + 1
-  };
-  persist();
-  return delay({ ...state.user });
-}
 async function fetchCategoryTree() {
   return delay(categoryTree.map((item) => ({ ...item, children: [...item.children] })));
 }
@@ -577,10 +549,6 @@ async function fetchRecords() {
   }));
   return delay(mapped);
 }
-async function fetchProgress() {
-  loadState();
-  return delay(buildProgress());
-}
 async function fetchRecommendedQuestions(limit = 3) {
   const answered = new Set(state.records.map((r) => r.questionId));
   const candidates = questions.filter((q) => !answered.has(q.id));
@@ -590,13 +558,9 @@ async function fetchRecommendedQuestions(limit = 3) {
 exports.fetchCategories = fetchCategories;
 exports.fetchCategoryDetail = fetchCategoryDetail;
 exports.fetchCategoryTree = fetchCategoryTree;
-exports.fetchCurrentUser = fetchCurrentUser;
-exports.fetchProgress = fetchProgress;
 exports.fetchQuestionDetail = fetchQuestionDetail;
 exports.fetchRecommendedQuestions = fetchRecommendedQuestions;
 exports.fetchRecords = fetchRecords;
-exports.loginWithWeixin = loginWithWeixin;
 exports.startPracticeSession = startPracticeSession;
 exports.submitAnswer = submitAnswer;
-exports.updateUserProfile = updateUserProfile;
 //# sourceMappingURL=../../.sourcemap/mp-weixin/api/mock.js.map

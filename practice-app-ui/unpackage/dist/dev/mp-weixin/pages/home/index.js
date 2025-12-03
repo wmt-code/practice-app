@@ -1,6 +1,8 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
 const api_mock = require("../../api/mock.js");
+const api_user = require("../../api/user.js");
+const api_progress = require("../../api/progress.js");
 if (!Array) {
   const _easycom_uni_badge2 = common_vendor.resolveComponent("uni-badge");
   const _easycom_uni_card2 = common_vendor.resolveComponent("uni-card");
@@ -18,27 +20,27 @@ if (!Math) {
 const _sfc_main = {
   __name: "index",
   setup(__props) {
-    const user = common_vendor.ref({});
-    const progress = common_vendor.ref({
-      totalQuestions: 0,
-      answeredQuestions: 0,
-      correctRate: 0,
-      categories: [],
-      percent: 0
-    });
+    const fallbackUser = () => api_user.getCachedProfile() || {
+      nickname: "未登录",
+      avatar: "/static/uni.png",
+      loggedIn: false,
+      points: 0
+    };
+    const user = common_vendor.ref(fallbackUser());
+    const progress = common_vendor.ref(api_progress.emptyProgress());
     const recommended = common_vendor.ref([]);
     const categories = common_vendor.ref([]);
     const loadData = async () => {
-      const [userInfo, progressInfo, catList, recommendList] = await Promise.all([
-        api_mock.fetchCurrentUser(),
-        api_mock.fetchProgress(),
+      const [userResult, progressResult, catList, recommendList] = await Promise.allSettled([
+        api_user.fetchProfile(),
+        api_progress.fetchProgressSummary(),
         api_mock.fetchCategories(),
         api_mock.fetchRecommendedQuestions()
       ]);
-      user.value = userInfo;
-      progress.value = progressInfo;
-      categories.value = catList;
-      recommended.value = recommendList;
+      user.value = userResult.status === "fulfilled" && userResult.value ? userResult.value : fallbackUser();
+      progress.value = progressResult.status === "fulfilled" && progressResult.value ? progressResult.value : api_progress.emptyProgress();
+      categories.value = catList.status === "fulfilled" ? catList.value : [];
+      recommended.value = recommendList.status === "fulfilled" ? recommendList.value : [];
     };
     const renderType = (type) => {
       if (type === "multiple")

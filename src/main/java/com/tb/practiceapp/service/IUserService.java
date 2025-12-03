@@ -19,7 +19,7 @@ public interface IUserService extends IService<User> {
 
     User findByUsername(String username);
 
-    User ensureUserFromWechat(String openId, String unionId, String accessToken, String refreshToken, Integer expiresIn, String nickname, String avatar);
+    User ensureUserFromWechat(String openId, String unionId, String sessionKey, Integer expiresIn, String nickname, String avatar);
 
     User getByIdCached(Long userId);
 

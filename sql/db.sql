@@ -9,10 +9,12 @@ CREATE TABLE `user` (
     `status` TINYINT NOT NULL DEFAULT 1,
     `openid` VARCHAR(100) UNIQUE NOT NULL,
     `unionid` VARCHAR(100),
+    `session_key` VARCHAR(255),
     `access_token` VARCHAR(512),
     `refresh_token` VARCHAR(512),
     `expires_in` INT,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `created_at` TIMESTAMP
+        DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 

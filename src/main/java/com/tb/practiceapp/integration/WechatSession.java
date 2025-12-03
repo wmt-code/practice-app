@@ -8,7 +8,6 @@ import lombok.Data;
 public class WechatSession {
     private String openId;
     private String unionId;
-    private String accessToken;
-    private String refreshToken;
+    private String sessionKey;
     private Integer expiresIn;
 }

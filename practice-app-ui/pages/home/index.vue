@@ -77,35 +77,38 @@
 <script setup>
 import { ref } from 'vue';
 import { onPullDownRefresh, onShow } from '@dcloudio/uni-app';
-import {
-  fetchCategories,
-  fetchCurrentUser,
-  fetchProgress,
-  fetchRecommendedQuestions,
-} from '@/api/mock.js';
+import { fetchCategories, fetchRecommendedQuestions } from '@/api/mock.js';
+import { fetchProfile, getCachedProfile } from '@/api/user';
+import { emptyProgress, fetchProgressSummary } from '@/api/progress';
 
-const user = ref({});
-const progress = ref({
-  totalQuestions: 0,
-  answeredQuestions: 0,
-  correctRate: 0,
-  categories: [],
-  percent: 0,
-});
+const fallbackUser = () =>
+  getCachedProfile() || {
+    nickname: '未登录',
+    avatar: '/static/uni.png',
+    loggedIn: false,
+    points: 0,
+  };
+
+const user = ref(fallbackUser());
+const progress = ref(emptyProgress());
 const recommended = ref([]);
 const categories = ref([]);
 
 const loadData = async () => {
-  const [userInfo, progressInfo, catList, recommendList] = await Promise.all([
-    fetchCurrentUser(),
-    fetchProgress(),
+  const [userResult, progressResult, catList, recommendList] = await Promise.allSettled([
+    fetchProfile(),
+    fetchProgressSummary(),
     fetchCategories(),
     fetchRecommendedQuestions(),
   ]);
-  user.value = userInfo;
-  progress.value = progressInfo;
-  categories.value = catList;
-  recommended.value = recommendList;
+  user.value =
+    userResult.status === 'fulfilled' && userResult.value ? userResult.value : fallbackUser();
+  progress.value =
+    progressResult.status === 'fulfilled' && progressResult.value
+      ? progressResult.value
+      : emptyProgress();
+  categories.value = catList.status === 'fulfilled' ? catList.value : [];
+  recommended.value = recommendList.status === 'fulfilled' ? recommendList.value : [];
 };
 
 const renderType = (type) => {

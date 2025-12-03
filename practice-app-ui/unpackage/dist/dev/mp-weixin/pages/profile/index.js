@@ -1,6 +1,8 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
-const api_mock = require("../../api/mock.js");
+const api_auth = require("../../api/auth.js");
+const api_progress = require("../../api/progress.js");
+const api_user = require("../../api/user.js");
 if (!Array) {
   const _easycom_uni_badge2 = common_vendor.resolveComponent("uni-badge");
   const _easycom_uni_card2 = common_vendor.resolveComponent("uni-card");
@@ -20,58 +22,63 @@ if (!Math) {
 const _sfc_main = {
   __name: "index",
   setup(__props) {
-    const user = common_vendor.ref({});
-    const progress = common_vendor.ref({
-      answeredQuestions: 0,
-      totalQuestions: 0,
-      correctRate: 0
-    });
+    var _a, _b, _c;
+    const defaultUser = {
+      nickname: "未登录",
+      avatar: "/static/uni.png",
+      loggedIn: false,
+      points: 0
+    };
+    const fallbackUser = () => api_user.normalizeUser(api_user.getCachedProfile()) || defaultUser;
+    const user = common_vendor.ref(fallbackUser());
+    const progress = common_vendor.ref(api_progress.emptyProgress());
     const formModel = common_vendor.reactive({
-      nickname: "",
-      avatar: "",
-      password: ""
+      nickname: ((_a = user.value) == null ? void 0 : _a.nickname) || "",
+      avatar: ((_b = user.value) == null ? void 0 : _b.avatar) || "",
+      email: ((_c = user.value) == null ? void 0 : _c.email) || ""
     });
     const rules = {
       nickname: {
         rules: [{ required: true, errorMessage: "请输入昵称" }]
-      },
-      password: {
-        rules: [{ minLength: 6, errorMessage: "密码长度至少 6 位" }]
       }
     };
     const formRef = common_vendor.ref(null);
     const loadData = async () => {
-      const [userInfo, progressInfo] = await Promise.all([api_mock.fetchCurrentUser(), api_mock.fetchProgress()]);
-      user.value = userInfo;
-      progress.value = progressInfo;
-      formModel.nickname = userInfo.nickname || "";
-      formModel.avatar = userInfo.avatar || "";
-      formModel.password = "";
+      try {
+        const profile = await api_user.fetchProfile();
+        user.value = profile || fallbackUser();
+      } catch (err) {
+        user.value = fallbackUser();
+      }
+      formModel.nickname = user.value.nickname || "";
+      formModel.avatar = user.value.avatar || "";
+      formModel.email = user.value.email || "";
+      try {
+        progress.value = await api_progress.fetchProgressSummary();
+      } catch (err) {
+        progress.value = api_progress.emptyProgress();
+      }
+    };
+    const getWxProfile = async () => {
+      if (!common_vendor.index.getUserProfile)
+        return {};
+      const res = await common_vendor.index.getUserProfile({ desc: "用于完善个人资料" });
+      return (res == null ? void 0 : res.userInfo) || {};
     };
     const handleWeixinLogin = async () => {
       try {
         common_vendor.index.showLoading({ title: "登录中" });
-        if (common_vendor.index.login) {
-          await new Promise((resolve) => {
-            common_vendor.index.login({
-              provider: "weixin",
-              success: resolve,
-              fail: resolve
-            });
-          });
-        }
-        let profile = {};
-        if (common_vendor.index.getUserProfile) {
-          const res = await common_vendor.index.getUserProfile({ desc: "用于完善个人资料" });
-          profile = res.userInfo || {};
-        }
-        const info = await api_mock.loginWithWeixin(profile);
-        user.value = info;
-        loadData();
+        const profile = await getWxProfile().catch(() => ({}));
+        const resp = await api_auth.wechatLogin({
+          nickname: profile.nickName || profile.nickname,
+          avatar: profile.avatarUrl || profile.avatar
+        });
+        user.value = resp.user || fallbackUser();
+        await loadData();
         common_vendor.index.showToast({ title: "登录成功", icon: "success" });
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/profile/index.vue:119", err);
-        common_vendor.index.showToast({ title: "登录失败，稍后再试", icon: "none" });
+        common_vendor.index.__f__("error", "at pages/profile/index.vue:122", err);
+        common_vendor.index.showToast({ title: err.message || "登录失败，稍后再试", icon: "none" });
       } finally {
         common_vendor.index.hideLoading();
       }
@@ -81,12 +88,16 @@ const _sfc_main = {
         return;
       try {
         await formRef.value.validate();
-        const info = await api_mock.updateUserProfile({
+        if (formModel.email && !/^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$/.test(formModel.email)) {
+          common_vendor.index.showToast({ title: "邮箱格式不正确", icon: "none" });
+          return;
+        }
+        const info = await api_user.updateProfile({
           nickname: formModel.nickname,
           avatar: formModel.avatar,
-          password: formModel.password
+          email: formModel.email
         });
-        user.value = info;
+        user.value = info || fallbackUser();
         common_vendor.index.showToast({ title: "保存成功", icon: "success" });
       } catch (err) {
         if (err == null ? void 0 : err.errMsg) {
@@ -134,15 +145,14 @@ const _sfc_main = {
           label: "头像 URL",
           name: "avatar"
         }),
-        n: common_vendor.o(($event) => formModel.password = $event),
+        n: common_vendor.o(($event) => formModel.email = $event),
         o: common_vendor.p({
-          type: "password",
-          placeholder: "6-20 位新密码",
-          modelValue: formModel.password
+          placeholder: "邮箱（可选）",
+          modelValue: formModel.email
         }),
         p: common_vendor.p({
-          label: "密码",
-          name: "password"
+          label: "邮箱",
+          name: "email"
         }),
         q: common_vendor.sr(formRef, "201c0da5-3,201c0da5-2", {
           "k": "formRef"

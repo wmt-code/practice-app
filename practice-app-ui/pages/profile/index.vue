@@ -24,8 +24,8 @@
         <uni-forms-item label="头像 URL" name="avatar">
           <uni-easyinput v-model="formModel.avatar" placeholder="可填写自定义头像链接" />
         </uni-forms-item>
-        <uni-forms-item label="密码" name="password">
-          <uni-easyinput type="password" v-model="formModel.password" placeholder="6-20 位新密码" />
+        <uni-forms-item label="邮箱" name="email">
+          <uni-easyinput v-model="formModel.email" placeholder="邮箱（可选）" />
         </uni-forms-item>
       </uni-forms>
       <button type="primary" class="primary-btn" @tap="handleSave">保存修改</button>
@@ -54,70 +54,73 @@
 <script setup>
 import { reactive, ref } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
-import {
-  fetchCurrentUser,
-  fetchProgress,
-  loginWithWeixin,
-  updateUserProfile,
-} from '@/api/mock.js';
+import { wechatLogin } from '@/api/auth';
+import { emptyProgress, fetchProgressSummary } from '@/api/progress';
+import { fetchProfile, getCachedProfile, normalizeUser, updateProfile } from '@/api/user';
 
-const user = ref({});
-const progress = ref({
-  answeredQuestions: 0,
-  totalQuestions: 0,
-  correctRate: 0,
-});
+const defaultUser = {
+  nickname: '未登录',
+  avatar: '/static/uni.png',
+  loggedIn: false,
+  points: 0,
+};
+
+const fallbackUser = () => normalizeUser(getCachedProfile()) || defaultUser;
+
+const user = ref(fallbackUser());
+const progress = ref(emptyProgress());
 
 const formModel = reactive({
-  nickname: '',
-  avatar: '',
-  password: '',
+  nickname: user.value?.nickname || '',
+  avatar: user.value?.avatar || '',
+  email: user.value?.email || '',
 });
 
 const rules = {
   nickname: {
     rules: [{ required: true, errorMessage: '请输入昵称' }],
   },
-  password: {
-    rules: [{ minLength: 6, errorMessage: '密码长度至少 6 位' }],
-  },
 };
 
 const formRef = ref(null);
 
 const loadData = async () => {
-  const [userInfo, progressInfo] = await Promise.all([fetchCurrentUser(), fetchProgress()]);
-  user.value = userInfo;
-  progress.value = progressInfo;
-  formModel.nickname = userInfo.nickname || '';
-  formModel.avatar = userInfo.avatar || '';
-  formModel.password = '';
+  try {
+    const profile = await fetchProfile();
+    user.value = profile || fallbackUser();
+  } catch (err) {
+    user.value = fallbackUser();
+  }
+  formModel.nickname = user.value.nickname || '';
+  formModel.avatar = user.value.avatar || '';
+  formModel.email = user.value.email || '';
+  try {
+    progress.value = await fetchProgressSummary();
+  } catch (err) {
+    progress.value = emptyProgress();
+  }
+};
+
+const getWxProfile = async () => {
+  if (!uni.getUserProfile) return {};
+  const res = await uni.getUserProfile({ desc: '用于完善个人资料' });
+  return res?.userInfo || {};
 };
 
 const handleWeixinLogin = async () => {
   try {
     uni.showLoading({ title: '登录中' });
-    if (uni.login) {
-      await new Promise((resolve) => {
-        uni.login({
-          provider: 'weixin',
-          success: resolve,
-          fail: resolve,
-        });
-      });
-    }
-    let profile = {};
-    if (uni.getUserProfile) {
-      const res = await uni.getUserProfile({ desc: '用于完善个人资料' });
-      profile = res.userInfo || {};
-    }
-    const info = await loginWithWeixin(profile);
-    user.value = info;
-    loadData();
+    const profile = await getWxProfile().catch(() => ({}));
+    const resp = await wechatLogin({
+      nickname: profile.nickName || profile.nickname,
+      avatar: profile.avatarUrl || profile.avatar,
+    });
+    user.value = resp.user || fallbackUser();
+    await loadData();
     uni.showToast({ title: '登录成功', icon: 'success' });
   } catch (err) {
     console.error(err);
-    uni.showToast({ title: '登录失败，稍后再试', icon: 'none' });
+    uni.showToast({ title: err.message || '登录失败，稍后再试', icon: 'none' });
   } finally {
     uni.hideLoading();
   }
@@ -127,12 +130,16 @@ const handleSave = async () => {
   if (!formRef.value) return;
   try {
     await formRef.value.validate();
-    const info = await updateUserProfile({
+    if (formModel.email && !/^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$/.test(formModel.email)) {
+      uni.showToast({ title: '邮箱格式不正确', icon: 'none' });
+      return;
+    }
+    const info = await updateProfile({
       nickname: formModel.nickname,
       avatar: formModel.avatar,
-      password: formModel.password,
+      email: formModel.email,
     });
-    user.value = info;
+    user.value = info || fallbackUser();
     uni.showToast({ title: '保存成功', icon: 'success' });
   } catch (err) {
     if (err?.errMsg) {
