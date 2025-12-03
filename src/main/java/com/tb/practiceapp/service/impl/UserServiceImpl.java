@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tb.practiceapp.common.BusinessException;
 import com.tb.practiceapp.common.ErrorCode;
+import com.tb.practiceapp.common.PasswordHasher;
 import com.tb.practiceapp.mapper.UserMapper;
 import com.tb.practiceapp.model.dto.user.PasswordUpdateRequest;
 import com.tb.practiceapp.model.dto.user.UserProfileUpdateRequest;
@@ -13,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -31,7 +31,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
 
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordHasher passwordHasher;
 
     @Override
     public User findByOpenId(String openId) {
@@ -79,7 +79,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             suffix++;
         }
         user.setUsername(candidate);
-        user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+        user.setPassword(passwordHasher.hash(UUID.randomUUID().toString()));
         user.setStatus(1);
         user.setRole("USER");
         user.setCreatedAt(LocalDateTime.now());
@@ -126,10 +126,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         if (user == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "用户不存在");
         }
-        if (StringUtils.isBlank(user.getPassword()) || !passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+        if (StringUtils.isBlank(user.getPassword()) || !passwordHasher.matches(request.getOldPassword(), user.getPassword())) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "原密码不正确");
         }
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setPassword(passwordHasher.hash(request.getNewPassword()));
         user.setUpdatedAt(LocalDateTime.now());
         this.updateById(user);
     }

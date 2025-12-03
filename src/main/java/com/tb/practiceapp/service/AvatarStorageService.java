@@ -4,6 +4,7 @@ import com.tb.practiceapp.common.BusinessException;
 import com.tb.practiceapp.common.ErrorCode;
 import com.tb.practiceapp.config.StorageProperties;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,6 +19,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AvatarStorageService {
 
     private static final long MAX_SIZE_BYTES = 5 * 1024 * 1024;
@@ -39,7 +41,8 @@ public class AvatarStorageService {
             Path target = dir.resolve(filename);
             file.transferTo(target);
             return "/files/avatars/" + filename;
-        } catch (IOException e) {
+        } catch (IOException | IllegalStateException e) {
+            log.error(e.getMessage());
             throw new BusinessException(ErrorCode.BAD_REQUEST, "头像保存失败");
         }
     }
@@ -55,4 +58,3 @@ public class AvatarStorageService {
         return ext;
     }
 }
-

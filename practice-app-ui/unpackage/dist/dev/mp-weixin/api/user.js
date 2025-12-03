@@ -40,6 +40,15 @@ async function uploadAvatar(filePath) {
   if (!filePath) {
     throw new Error("缺少头像文件路径");
   }
+  const isRemote = /^https?:\/\//i.test(filePath);
+  if (isRemote) {
+    const res2 = await api_http.request({
+      url: "/user/me/avatar",
+      method: "POST",
+      data: { avatarUrl: filePath }
+    });
+    return res2;
+  }
   const res = await api_http.upload({ url: "/user/me/avatar", filePath, name: "file" });
   if (typeof res === "string")
     return res;

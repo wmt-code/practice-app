@@ -1,6 +1,7 @@
 package com.tb.practiceapp.controller;
 
 
+import com.tb.practiceapp.common.LoginRequired;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.springframework.web.bind.annotation.RestController;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/user-quiz-record")
+@LoginRequired
 public class UserQuizRecordController {
 
 }

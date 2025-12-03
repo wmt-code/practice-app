@@ -3,8 +3,6 @@ package com.tb.practiceapp.common;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -40,18 +38,6 @@ public class GlobalExceptionHandler {
             status = HttpStatus.BAD_REQUEST;
         }
         return new ResponseEntity<>(ApiResponse.fail(ex.getMessage()), status);
-    }
-
-    @ExceptionHandler(AuthenticationException.class)
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public ApiResponse<Void> handleAuth(AuthenticationException ex) {
-        return ApiResponse.fail(ex.getMessage());
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    @ResponseStatus(HttpStatus.FORBIDDEN)
-    public ApiResponse<Void> handleAccessDenied(AccessDeniedException ex) {
-        return ApiResponse.fail("Access denied");
     }
 
     @ExceptionHandler(Exception.class)

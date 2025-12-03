@@ -4,8 +4,13 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.io.Serial;
+import java.io.Serializable;
+
 @Data
-public class UserProfileUpdateRequest {
+public class UserProfileUpdateRequest implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     @Size(max = 50, message = "昵称长度不能超过50")
     private String nickname;
 

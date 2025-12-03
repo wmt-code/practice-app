@@ -69,6 +69,7 @@ const _sfc_main = {
       if (avatarUrl) {
         formModel.avatarLocal = avatarUrl;
       }
+      common_vendor.index.__f__("log", "at pages/profile/index.vue:184", avatarUrl);
     };
     const handleChooseImage = () => {
       common_vendor.index.chooseImage({
@@ -92,7 +93,7 @@ const _sfc_main = {
         showProfileCard.value = true;
         common_vendor.index.showToast({ title: "登录成功", icon: "success" });
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/profile/index.vue:208", err);
+        common_vendor.index.__f__("error", "at pages/profile/index.vue:209", err);
         common_vendor.index.showToast({ title: err.message || "登录失败，稍后再试", icon: "none" });
       } finally {
         common_vendor.index.hideLoading();

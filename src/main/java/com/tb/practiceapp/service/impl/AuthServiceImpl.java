@@ -8,6 +8,7 @@ import com.tb.practiceapp.model.dto.auth.LoginResponse;
 import com.tb.practiceapp.model.dto.auth.PasswordLoginRequest;
 import com.tb.practiceapp.model.dto.auth.WechatLoginRequest;
 import com.tb.practiceapp.model.entity.User;
+import com.tb.practiceapp.common.PasswordHasher;
 import com.tb.practiceapp.security.JwtTokenProvider;
 import com.tb.practiceapp.service.AuthService;
 import com.tb.practiceapp.service.IUserService;
@@ -15,7 +16,6 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
 public class AuthServiceImpl implements AuthService {
 
     private final IUserService userService;
-    private final PasswordEncoder passwordEncoder;
+    private final PasswordHasher passwordHasher;
     private final JwtTokenProvider jwtTokenProvider;
     private final WechatClient wechatClient;
 
@@ -44,7 +44,7 @@ public class AuthServiceImpl implements AuthService {
         if (!Integer.valueOf(1).equals(user.getStatus())) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "账号已被禁用");
         }
-        if (StringUtils.isBlank(user.getPassword()) || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        if (StringUtils.isBlank(user.getPassword()) || !passwordHasher.matches(request.getPassword(), user.getPassword())) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
         return toResponse(user);

@@ -181,6 +181,7 @@ const showProfileCard = ref(false);
     if (avatarUrl) {
       formModel.avatarLocal = avatarUrl;
     }
+	console.log(avatarUrl)
   };
 
   const handleChooseImage = () => {
@@ -339,55 +340,7 @@ onShow(() => {
     font-weight: 700;
   }
 
-.muted {
-  color: #6b7280;
-}
-
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-  padding: 20rpx;
-}
-
-.profile-popup {
-  background: #fff;
-  border-radius: 16rpx;
-  padding: 24rpx;
-  width: 100%;
-  max-width: 640rpx;
-  box-shadow: 0 12rpx 40rpx rgba(0, 0, 0, 0.18);
-}
-
-.popup-title {
-  font-size: 32rpx;
-  font-weight: 700;
-  margin-bottom: 16rpx;
-}
-
-.popup-row {
-  align-items: center;
-}
-
-.popup-field {
-  margin-top: 12rpx;
-}
-
-.popup-actions {
-  display: flex;
-  gap: 12rpx;
-  margin-top: 16rpx;
-}
-
-.uni-input {
-  width: 100%;
-  padding: 16rpx;
-  border: 1px solid #e5e7eb;
-  border-radius: 12rpx;
-  background: #fff;
-}
+  .muted {
+    color: #6b7280;
+  }
   </style>

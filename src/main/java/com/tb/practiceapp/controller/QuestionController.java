@@ -2,6 +2,7 @@ package com.tb.practiceapp.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tb.practiceapp.common.ApiResponse;
+import com.tb.practiceapp.common.LoginRequired;
 import com.tb.practiceapp.common.PageResponse;
 import com.tb.practiceapp.model.dto.question.QuestionCreateRequest;
 import com.tb.practiceapp.model.dto.question.QuestionQueryRequest;
@@ -10,7 +11,6 @@ import com.tb.practiceapp.model.entity.Question;
 import com.tb.practiceapp.service.IQuestionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,20 +29,20 @@ public class QuestionController {
     private final IQuestionService questionService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @LoginRequired(roles = {"ADMIN"})
     public ApiResponse<Question> create(@Valid @RequestBody QuestionCreateRequest request) {
         return ApiResponse.ok(questionService.createQuestion(request));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @LoginRequired(roles = {"ADMIN"})
     public ApiResponse<Question> update(@PathVariable Long id, @Valid @RequestBody QuestionUpdateRequest request) {
         request.setId(id);
         return ApiResponse.ok(questionService.updateQuestion(request));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @LoginRequired(roles = {"ADMIN"})
     public ApiResponse<Void> delete(@PathVariable Long id) {
         questionService.deleteQuestion(id);
         return ApiResponse.ok();

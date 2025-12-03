@@ -4,8 +4,13 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.io.Serial;
+import java.io.Serializable;
+
 @Data
-public class PasswordUpdateRequest {
+public class PasswordUpdateRequest implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     @NotBlank(message = "原密码不能为空")
     private String oldPassword;
 
