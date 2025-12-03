@@ -134,6 +134,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         this.updateById(user);
     }
 
+    @Override
+    @CacheEvict(value = "users", key = "#userId")
+    public void updateAvatar(Long userId, String avatarUrl) {
+        if (StringUtils.isBlank(avatarUrl)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "头像地址不能为空");
+        }
+        User user = this.getById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "用户不存在");
+        }
+        user.setAvatar(avatarUrl);
+        user.setUpdatedAt(LocalDateTime.now());
+        this.updateById(user);
+    }
+
     @CacheEvict(value = "users", key = "#user.id")
     public void updateUser(User user) {
         this.updateById(user);

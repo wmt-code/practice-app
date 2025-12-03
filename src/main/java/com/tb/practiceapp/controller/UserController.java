@@ -7,15 +7,18 @@ import com.tb.practiceapp.model.dto.user.PasswordUpdateRequest;
 import com.tb.practiceapp.model.dto.user.UserProfileUpdateRequest;
 import com.tb.practiceapp.model.entity.User;
 import com.tb.practiceapp.service.IUserService;
+import com.tb.practiceapp.service.AvatarStorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/user")
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final IUserService userService;
+    private final AvatarStorageService avatarStorageService;
 
     @GetMapping("/me")
     public ApiResponse<User> me() {
@@ -39,6 +43,14 @@ public class UserController {
     public ApiResponse<Void> updatePassword(@Valid @RequestBody PasswordUpdateRequest request) {
         userService.updatePassword(currentUserId(), request);
         return ApiResponse.ok();
+    }
+
+    @PostMapping("/me/avatar")
+    public ApiResponse<String> uploadAvatar(MultipartFile file) {
+        Long userId = currentUserId();
+        String url = avatarStorageService.storeAvatar(userId, file);
+        userService.updateAvatar(userId, url);
+        return ApiResponse.ok(url);
     }
 
     private Long currentUserId() {

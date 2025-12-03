@@ -1,4 +1,4 @@
-import { request, getStoredUser, setStoredUser } from './http';
+import { request, getStoredUser, setStoredUser, upload } from './http';
 
 const DEFAULT_AVATAR = '/static/uni.png';
 
@@ -39,4 +39,14 @@ export async function updateProfile(payload = {}) {
 export function getCachedProfile() {
   const stored = getStoredUser();
   return stored ? normalizeUser(stored) : null;
+}
+
+export async function uploadAvatar(filePath) {
+  if (!filePath) {
+    throw new Error('缺少头像文件路径');
+  }
+  const res = await upload({ url: '/user/me/avatar', filePath, name: 'file' });
+  if (typeof res === 'string') return res;
+  if (res?.url) return res.url;
+  return res;
 }

@@ -128,4 +128,47 @@ export async function request({ url, method = 'GET', data = {}, header = {}, aut
   return body && Object.prototype.hasOwnProperty.call(body, 'data') ? body.data : body;
 }
 
+export async function upload({ url, filePath, name = 'file', formData = {}, header = {}, auth = true }) {
+  const fullUrl = buildUrl(url || '');
+  const finalHeaders = { ...header };
+  if (auth) {
+    const token = getAccessToken();
+    if (token) {
+      finalHeaders.Authorization = `Bearer ${token}`;
+    }
+  }
+  return new Promise((resolve, reject) => {
+    uni.uploadFile({
+      url: fullUrl,
+      filePath,
+      name,
+      formData,
+      header: finalHeaders,
+      success: (res) => {
+        if (res.statusCode === 401) {
+          clearTokens();
+          setStoredUser(null);
+          reject(new Error('未登录或登录已过期'));
+          return;
+        }
+        if (res.statusCode >= 400) {
+          reject(new Error(res.data || '上传失败'));
+          return;
+        }
+        try {
+          const body = typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+          if (body && body.success === false) {
+            reject(new Error(body.message || '上传失败'));
+          } else {
+            resolve(body && Object.prototype.hasOwnProperty.call(body, 'data') ? body.data : body);
+          }
+        } catch (err) {
+          reject(new Error('上传结果解析失败'));
+        }
+      },
+      fail: (err) => reject(err),
+    });
+  });
+}
+
 export { API_BASE };

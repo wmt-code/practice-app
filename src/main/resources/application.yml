@@ -37,6 +37,9 @@ wechat:
   mock-open-id: demo-openid
   mock-session-key: demo-session-key
 
+storage:
+  avatar-path: ./uploads/avatars
+
 logging:
   level:
     com.tb.practiceapp: INFO

@@ -26,4 +26,6 @@ public interface IUserService extends IService<User> {
     void updateProfile(Long userId, UserProfileUpdateRequest request);
 
     void updatePassword(Long userId, PasswordUpdateRequest request);
+
+    void updateAvatar(Long userId, String avatarUrl);
 }

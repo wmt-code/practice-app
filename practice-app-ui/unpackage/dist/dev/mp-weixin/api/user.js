@@ -36,8 +36,20 @@ function getCachedProfile() {
   const stored = api_http.getStoredUser();
   return stored ? normalizeUser(stored) : null;
 }
+async function uploadAvatar(filePath) {
+  if (!filePath) {
+    throw new Error("缺少头像文件路径");
+  }
+  const res = await api_http.upload({ url: "/user/me/avatar", filePath, name: "file" });
+  if (typeof res === "string")
+    return res;
+  if (res == null ? void 0 : res.url)
+    return res.url;
+  return res;
+}
 exports.fetchProfile = fetchProfile;
 exports.getCachedProfile = getCachedProfile;
 exports.normalizeUser = normalizeUser;
 exports.updateProfile = updateProfile;
+exports.uploadAvatar = uploadAvatar;
 //# sourceMappingURL=../../.sourcemap/mp-weixin/api/user.js.map
