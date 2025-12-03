@@ -12,8 +12,6 @@ import com.tb.practiceapp.model.entity.User;
 import com.tb.practiceapp.service.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -88,13 +86,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     }
 
     @Override
-    @Cacheable(value = "users", key = "#userId")
     public User getByIdCached(Long userId) {
         return this.getById(userId);
     }
 
     @Override
-    @CacheEvict(value = "users", key = "#userId")
     public void updateProfile(Long userId, UserProfileUpdateRequest request) {
         User user = this.getById(userId);
         if (user == null) {
@@ -120,7 +116,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     }
 
     @Override
-    @CacheEvict(value = "users", key = "#userId")
     public void updatePassword(Long userId, PasswordUpdateRequest request) {
         User user = this.getById(userId);
         if (user == null) {
@@ -135,7 +130,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     }
 
     @Override
-    @CacheEvict(value = "users", key = "#userId")
     public void updateAvatar(Long userId, String avatarUrl) {
         if (StringUtils.isBlank(avatarUrl)) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "头像地址不能为空");
@@ -149,7 +143,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         this.updateById(user);
     }
 
-    @CacheEvict(value = "users", key = "#user.id")
     public void updateUser(User user) {
         this.updateById(user);
     }

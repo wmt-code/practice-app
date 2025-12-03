@@ -1,6 +1,7 @@
 package com.tb.practiceapp.common;
 
 import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -22,12 +24,14 @@ public class GlobalExceptionHandler {
                 .stream()
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining("; "));
+        log.error(ex.getMessage(), ex);
         return ApiResponse.fail(message);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
     public ApiResponse<Void> handleConstraint(ConstraintViolationException ex) {
+        log.error(ex.getMessage(), ex);
         return ApiResponse.fail(ex.getMessage());
     }
 
@@ -37,12 +41,15 @@ public class GlobalExceptionHandler {
         if (status == null) {
             status = HttpStatus.BAD_REQUEST;
         }
+        log.error(ex.getMessage(), ex);
         return new ResponseEntity<>(ApiResponse.fail(ex.getMessage()), status);
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse<Void> handleUnknown(Exception ex) {
+
+        log.error(ex.getMessage(), ex);
         return ApiResponse.fail("Internal server error");
     }
 }
