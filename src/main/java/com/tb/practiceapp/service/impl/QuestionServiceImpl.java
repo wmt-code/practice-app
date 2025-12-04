@@ -77,7 +77,6 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
     }
 
     @Override
-    @Cacheable(value = "questions", key = "#id")
     public Question getByIdCached(Long id) {
         return this.getById(id);
     }
