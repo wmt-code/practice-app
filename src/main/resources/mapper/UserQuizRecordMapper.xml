@@ -2,4 +2,47 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.tb.practiceapp.mapper.UserQuizRecordMapper">
 
+    <resultMap id="MyQuizRecordVOMap" type="com.tb.practiceapp.model.vo.quiz.MyQuizRecordVO">
+        <result column="quiz_id" property="quizId"/>
+        <result column="quiz_title" property="quizTitle"/>
+        <result column="score" property="score"/>
+        <result column="duration" property="duration"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+    </resultMap>
+
+    <resultMap id="QuizRankItemVOMap" type="com.tb.practiceapp.model.vo.quiz.QuizRankItemVO">
+        <result column="user_id" property="userId"/>
+        <result column="nickname" property="nickname"/>
+        <result column="score" property="score"/>
+        <result column="duration" property="duration"/>
+        <result column="submit_time" property="submitTime"/>
+    </resultMap>
+
+    <select id="pageMyRecords" resultMap="MyQuizRecordVOMap">
+        SELECT
+            r.quiz_id,
+            q.title AS quiz_title,
+            r.score,
+            r.duration,
+            r.start_time,
+            r.end_time
+        FROM user_quiz_record r
+        LEFT JOIN quiz q ON r.quiz_id = q.id
+        WHERE r.user_id = #{userId}
+        ORDER BY r.end_time DESC
+    </select>
+
+    <select id="pageQuizRank" resultMap="QuizRankItemVOMap">
+        SELECT
+            r.user_id,
+            u.nickname,
+            r.score,
+            r.duration,
+            r.end_time AS submit_time
+        FROM user_quiz_record r
+        LEFT JOIN user u ON r.user_id = u.id
+        WHERE r.quiz_id = #{quizId}
+        ORDER BY r.score DESC, r.duration ASC, r.end_time ASC
+    </select>
 </mapper>

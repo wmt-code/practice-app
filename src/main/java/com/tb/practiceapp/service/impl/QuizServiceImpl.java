@@ -21,6 +21,7 @@ import com.tb.practiceapp.model.vo.quiz.QuizSubmitResultVO;
 import com.tb.practiceapp.model.vo.question.QuestionPracticeVO;
 import com.tb.practiceapp.service.IQuizService;
 import com.tb.practiceapp.service.IQuestionService;
+import com.tb.practiceapp.service.IUserQuizRecordService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -40,7 +41,7 @@ public class QuizServiceImpl extends ServiceImpl<QuizMapper, Quiz> implements IQ
 
     private final ObjectMapper objectMapper;
     private final IQuestionService questionService;
-    private final UserQuizRecordMapper userQuizRecordMapper;
+    private final IUserQuizRecordService userQuizRecordService;
 
     @Override
     public QuizDetailVO createOrUpdate(QuizCreateDTO dto) {
@@ -95,7 +96,7 @@ public class QuizServiceImpl extends ServiceImpl<QuizMapper, Quiz> implements IQ
         }
         List<Long> questionIds = readQuestionIds(quiz.getQuestionIds());
         if (questionIds.isEmpty()) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "试卷未配置题目");
+            throw new BusinessException(ErrorCode.SERVER_ERROR, "试卷未配置题目");
         }
         Map<Long, Question> questionMap = questionService.listByIds(questionIds).stream()
                 .collect(Collectors.toMap(Question::getId, q -> q));
@@ -147,16 +148,10 @@ public class QuizServiceImpl extends ServiceImpl<QuizMapper, Quiz> implements IQ
             }
         }
         int wrongCount = quizQuestionIds.size() - correctCount;
-        UserQuizRecord record = new UserQuizRecord();
-        record.setUserId(userId);
-        record.setQuizId(quizId);
-        record.setScore(obtainedScore);
         LocalDateTime end = LocalDateTime.now();
-        record.setEndTime(end);
-        record.setStartTime(end.minusSeconds(dto.getDuration() == null ? 0 : dto.getDuration()));
-        record.setDuration(dto.getDuration() == null ? 0 : dto.getDuration());
-        record.setCreatedAt(LocalDateTime.now());
-        userQuizRecordMapper.insert(record);
+        int duration = dto.getDuration() == null ? 0 : dto.getDuration();
+        LocalDateTime start = end.minusSeconds(duration);
+        userQuizRecordService.saveRecord(userId, quizId, obtainedScore, duration, start, end);
 
         QuizSubmitResultVO vo = new QuizSubmitResultVO();
         vo.setQuizId(quizId);

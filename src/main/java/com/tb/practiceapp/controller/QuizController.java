@@ -11,6 +11,7 @@ import com.tb.practiceapp.model.vo.quiz.QuizPaperVO;
 import com.tb.practiceapp.model.vo.quiz.QuizStatsVO;
 import com.tb.practiceapp.model.vo.quiz.QuizSubmitResultVO;
 import com.tb.practiceapp.service.IQuizService;
+import com.tb.practiceapp.service.IUserQuizRecordService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 public class QuizController {
 
     private final IQuizService quizService;
+    private final IUserQuizRecordService userQuizRecordService;
 
     @PostMapping
     public ApiResponse<QuizDetailVO> create(@RequestBody QuizCreateDTO dto) {
