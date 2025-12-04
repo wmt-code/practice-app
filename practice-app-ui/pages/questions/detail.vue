@@ -11,7 +11,7 @@
         <text class="muted">预计 {{ question.duration }}s</text>
       </view>
 
-      <view class="option-area" v-if="question.type === 'multiple'">
+      <view class="option-area" v-if="isMultiple(question.type)">
         <checkbox-group @change="onMultipleChange">
           <label v-for="opt in question.options" :key="opt.value" class="option">
             <checkbox
@@ -23,6 +23,16 @@
             <text class="option-text">{{ opt.value }}. {{ opt.text }}</text>
           </label>
         </checkbox-group>
+      </view>
+
+      <view class="option-area" v-else-if="isShortAnswer(question.type)">
+        <textarea
+          class="short-input"
+          :value="selected[0] || ''"
+          placeholder="请输入答案"
+          auto-height
+          @input="onTextChange"
+        />
       </view>
 
       <view class="option-area" v-else>
@@ -81,11 +91,9 @@
 <script setup>
 import { ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import {
-  fetchCategories,
-  fetchQuestionDetail,
-  submitAnswer as submitAnswerApi,
-} from '@/api/mock.js';
+import { fetchCategoryTree, flattenCategoryTree } from '@/api/categories.js';
+import { fetchQuestionDetail } from '@/api/questions.js';
+import { submitAnswer as submitAnswerApi } from '@/api/answers.js';
 
 const question = ref({
   options: [],
@@ -96,9 +104,17 @@ const feedback = ref(null);
 const submitting = ref(false);
 
 const renderType = (type) => {
-  if (type === 'multiple') return '多选';
-  if (type === 'truefalse') return '判断';
+  const t = String(type || '').toLowerCase();
+  if (t.includes('multiple')) return '多选';
+  if (t.includes('true') || t.includes('judge')) return '判断';
+  if (t.includes('fill') || t.includes('short')) return '简答';
   return '单选';
+};
+
+const isMultiple = (type) => String(type || '').toLowerCase().includes('multiple');
+const isShortAnswer = (type) => {
+  const t = String(type || '').toLowerCase();
+  return t.includes('fill') || t.includes('short');
 };
 
 const onSingleChange = (e) => {
@@ -109,27 +125,39 @@ const onMultipleChange = (e) => {
   selected.value = e.detail.value || [];
 };
 
+const onTextChange = (e) => {
+  selected.value = [e.detail.value || ''];
+};
+
 const getCategoryName = (id) =>
-  categories.value.find((c) => c.id === id)?.name || '未分类';
+  categories.value.find((c) => String(c.id) === String(id))?.name || '未分类';
 
 const backToList = () => {
   uni.switchTab({ url: '/pages/questions/index' });
 };
 
 const loadData = async (id) => {
-  const [catList, detail] = await Promise.all([fetchCategories(), fetchQuestionDetail(id)]);
-  categories.value = catList;
-  if (!detail?.id) {
-    uni.showToast({ title: '题目不存在', icon: 'none' });
-    question.value = { options: [] };
-    return;
+  try {
+    const [catTree, detail] = await Promise.all([fetchCategoryTree(), fetchQuestionDetail(id)]);
+    categories.value = flattenCategoryTree(catTree);
+    if (!detail?.id) {
+      uni.showToast({ title: '题目不存在', icon: 'none' });
+      question.value = { options: [] };
+      return;
+    }
+    question.value = detail;
+    selected.value = [];
+    feedback.value = null;
+  } catch (err) {
+    console.error(err);
+    uni.showToast({ title: '加载失败', icon: 'none' });
   }
-  question.value = detail;
 };
 
 const handleSubmit = async () => {
   if (!question.value.id) return;
-  if (!selected.value.length) {
+  const chosen = (selected.value || []).map((v) => (typeof v === 'string' ? v.trim() : v));
+  if (!chosen.length || !chosen.some((v) => v)) {
     uni.showToast({ title: '请选择答案', icon: 'none' });
     return;
   }
@@ -137,8 +165,8 @@ const handleSubmit = async () => {
   try {
     const res = await submitAnswerApi({
       questionId: question.value.id,
-      chosen: selected.value,
-      spentSeconds: question.value.duration || 20,
+      chosen,
+      timeSpent: question.value.duration || 20,
     });
     feedback.value = res;
     uni.showToast({
@@ -201,6 +229,18 @@ onLoad((options) => {
 
 .option-area {
   margin-top: 12rpx;
+}
+
+.short-input {
+  width: 100%;
+  min-height: 160rpx;
+  padding: 14rpx;
+  border-radius: 12rpx;
+  border: 2rpx solid #e5e7eb;
+  background: #f9fafb;
+  box-sizing: border-box;
+  font-size: 28rpx;
+  color: #1f2937;
 }
 
 .option {

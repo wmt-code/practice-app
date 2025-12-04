@@ -1,5 +1,6 @@
 package com.tb.practiceapp.common;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,7 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 @Slf4j
+@Hidden
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

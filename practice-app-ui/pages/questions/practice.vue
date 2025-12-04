@@ -20,7 +20,11 @@
       </view>
     </view>
 
-    <view v-if="!session.total" class="empty">
+    <view v-if="loading" class="empty">
+      <uni-load-more status="loading" />
+    </view>
+
+    <view v-else-if="!session.total" class="empty">
       <text class="muted">暂无题目，稍后再试</text>
     </view>
 
@@ -38,7 +42,7 @@
             <text class="text">{{ idx + 1 }}、{{ item.title }}</text>
           </view>
 
-          <view v-if="item.type === 'multiple'" class="options">
+          <view v-if="isMultiple(item.type)" class="options">
             <checkbox-group @change="onMultipleChange">
               <label v-for="opt in item.options" :key="opt.value" class="option">
                 <checkbox
@@ -50,6 +54,15 @@
                 <text class="opt-text">{{ opt.value }}. {{ opt.text }}</text>
               </label>
             </checkbox-group>
+          </view>
+          <view v-else-if="isShortAnswer(item.type)" class="options">
+            <textarea
+              class="short-input"
+              :value="currentSelected[0] || ''"
+              placeholder="请输入答案"
+              auto-height
+              @input="onTextChange"
+            />
           </view>
           <view v-else class="options">
             <radio-group @change="onSingleChange">
@@ -114,7 +127,9 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import { startPracticeSession, submitAnswer as submitAnswerApi } from '@/api/mock.js';
+import { fetchPracticeRandom, fetchPracticeSequence } from '@/api/questions.js';
+import { submitAnswer as submitAnswerApi } from '@/api/answers.js';
+import { fetchCategoryTree, flattenCategoryTree } from '@/api/categories.js';
 
 const questions = ref([]);
 const session = reactive({
@@ -123,19 +138,39 @@ const session = reactive({
   category: null,
   parent: null,
 });
+const pagination = reactive({
+  page: 1,
+  size: 10,
+  total: 0,
+  loading: false,
+});
+const params = reactive({
+  categoryId: '',
+  mode: 'order',
+  count: 0,
+});
 const currentIndex = ref(0);
 const answers = reactive({});
 const feedback = reactive({});
 const submitting = ref(false);
+const loading = ref(false);
 
 const currentQuestionId = computed(() => questions.value[currentIndex.value]?.id);
 const currentSelected = computed(() => answers[currentQuestionId.value] || []);
 const hasAnswered = computed(() => Boolean(feedback[currentQuestionId.value]));
 
 const renderType = (type) => {
-  if (type === 'multiple') return '多选';
-  if (type === 'truefalse') return '判断';
+  const t = String(type || '').toLowerCase();
+  if (t.includes('multiple')) return '多选';
+  if (t.includes('true') || t.includes('judge')) return '判断';
+  if (t.includes('fill') || t.includes('short')) return '简答';
   return '单选';
+};
+
+const isMultiple = (type) => String(type || '').toLowerCase().includes('multiple');
+const isShortAnswer = (type) => {
+  const t = String(type || '').toLowerCase();
+  return t.includes('fill') || t.includes('short');
 };
 
 const onSingleChange = (e) => {
@@ -148,11 +183,110 @@ const onMultipleChange = (e) => {
   answers[currentQuestionId.value] = e.detail.value || [];
 };
 
+const onTextChange = (e) => {
+  if (!currentQuestionId.value) return;
+  answers[currentQuestionId.value] = [e.detail.value || ''];
+};
+
+const loadCategoryInfo = async (categoryId) => {
+  try {
+    const tree = await fetchCategoryTree();
+    const flat = flattenCategoryTree(tree);
+    const current = flat.find((c) => `${c.id}` === `${categoryId}`);
+    const parent = flat.find((c) => c.id === current?.parentId);
+    session.category = current || null;
+    session.parent = parent || null;
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const initAnswers = () => {
+  questions.value.forEach((q) => {
+    if (!answers[q.id]) {
+      answers[q.id] = [];
+    }
+  });
+};
+
+const loadRandom = async () => {
+  const limit = params.count > 0 ? params.count : 5;
+  const list = await fetchPracticeRandom({ categoryId: params.categoryId, limit });
+  questions.value = list;
+  session.total = list.length;
+  pagination.total = list.length;
+  pagination.page = 1;
+  pagination.size = list.length || limit;
+  session.mode = 'random';
+  initAnswers();
+};
+
+const loadSequencePage = async (pageToLoad = 1, append = false) => {
+  if (pagination.loading) return;
+  pagination.loading = true;
+  try {
+    const size = params.count && params.count > 0 ? params.count : pagination.size || 10;
+    const res = await fetchPracticeSequence({
+      categoryId: params.categoryId,
+      page: pageToLoad,
+      size,
+    });
+    const list = res.records || [];
+    const limitedTotal =
+      params.count && params.count > 0
+        ? Math.min(params.count, res.total || params.count)
+        : res.total || list.length;
+    pagination.total = limitedTotal;
+    session.total = limitedTotal;
+    pagination.size = res.size || size;
+    pagination.page = pageToLoad;
+    questions.value = append ? [...questions.value, ...list] : list;
+    initAnswers();
+  } catch (err) {
+    console.error(err);
+    uni.showToast({ title: '加载题目失败', icon: 'none' });
+  } finally {
+    pagination.loading = false;
+  }
+};
+
+const loadSession = async (options) => {
+  loading.value = true;
+  try {
+    params.categoryId = options?.categoryId ? Number(options.categoryId) || options.categoryId : '';
+    if (!params.categoryId) {
+      uni.showToast({ title: '缺少分类参数', icon: 'none' });
+      return;
+    }
+    params.count = options?.count ? Number(options.count) : 0;
+    params.mode = options?.mode === 'random' ? 'random' : 'order';
+    await loadCategoryInfo(params.categoryId);
+    if (params.mode === 'random') {
+      await loadRandom();
+    } else {
+      await loadSequencePage(1, false);
+    }
+    currentIndex.value = 0;
+  } catch (err) {
+    console.error(err);
+    uni.showToast({ title: err.message || '加载失败', icon: 'none' });
+  } finally {
+    loading.value = false;
+  }
+};
+
+const maybeLoadMore = async () => {
+  if (session.mode !== 'order') return;
+  if (questions.value.length >= session.total) return;
+  if (pagination.loading) return;
+  await loadSequencePage(pagination.page + 1, true);
+};
+
 const submitAnswer = async () => {
   const question = questions.value[currentIndex.value];
   if (!question) return;
-  const chosen = answers[question.id] || [];
-  if (!chosen.length) {
+  const chosen = (answers[question.id] || []).map((v) => (typeof v === 'string' ? v.trim() : v));
+  if (!chosen.length || !chosen.some((v) => v)) {
     uni.showToast({ title: '请选择答案', icon: 'none' });
     return;
   }
@@ -162,7 +296,7 @@ const submitAnswer = async () => {
     const res = await submitAnswerApi({
       questionId: question.id,
       chosen,
-      spentSeconds: question.duration || 20,
+      timeSpent: question.duration || 20,
     });
     feedback[question.id] = res;
     if (res.isCorrect) {
@@ -185,6 +319,9 @@ const goNext = (auto = false) => {
     return;
   }
   currentIndex.value += 1;
+  if (currentIndex.value >= questions.value.length - 2) {
+    maybeLoadMore();
+  }
   const nextId = questions.value[currentIndex.value]?.id;
   if (auto && nextId && feedback[nextId]?.isCorrect) {
     goNext(true);
@@ -193,27 +330,9 @@ const goNext = (auto = false) => {
 
 const onSwipe = (e) => {
   currentIndex.value = e.detail.current;
-};
-
-const loadSession = async (options) => {
-  const categoryId = options?.categoryId;
-  if (!categoryId) {
-    uni.showToast({ title: '缺少分类参数', icon: 'none' });
-    return;
+  if (currentIndex.value >= questions.value.length - 2) {
+    maybeLoadMore();
   }
-  const count = Number(options?.count);
-  const mode = options?.mode === 'random' ? 'random' : 'order';
-  const sessionData = await startPracticeSession({
-    categoryId,
-    mode,
-    count: Number.isFinite(count) ? count : undefined,
-  });
-  questions.value = sessionData.questions || [];
-  session.total = sessionData.total || 0;
-  session.mode = sessionData.mode;
-  session.category = sessionData.category;
-  session.parent = sessionData.parent;
-  currentIndex.value = 0;
 };
 
 watch(currentQuestionId, (id) => {
@@ -312,6 +431,18 @@ onLoad((options) => {
 .options {
   margin-top: 12rpx;
   flex: 1;
+}
+
+.short-input {
+  width: 100%;
+  min-height: 200rpx;
+  padding: 14rpx;
+  border-radius: 12rpx;
+  border: 2rpx solid #e5e7eb;
+  background: #f9fafb;
+  box-sizing: border-box;
+  font-size: 28rpx;
+  color: #1f2937;
 }
 
 .option {

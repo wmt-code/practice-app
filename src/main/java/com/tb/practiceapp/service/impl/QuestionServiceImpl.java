@@ -17,7 +17,6 @@ import com.tb.practiceapp.model.vo.question.QuestionPracticeVO;
 import com.tb.practiceapp.service.IQuestionService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -51,7 +50,6 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
     }
 
     @Override
-    @CacheEvict(value = "questions", key = "#request.id")
     public Question updateQuestion(QuestionUpdateRequest request) {
         Question question = this.getById(request.getId());
         if (question == null) {
@@ -72,7 +70,6 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
     }
 
     @Override
-    @CacheEvict(value = "questions", key = "#id")
     public void deleteQuestion(Long id) {
         if (!this.removeById(id)) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "题目不存在");

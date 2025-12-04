@@ -59,6 +59,12 @@
       >
         <view class="tag-row">
           <uni-tag :text="renderType(item.type)" size="mini" type="primary" />
+          <uni-tag
+            v-if="item.difficulty"
+            :text="renderDifficulty(item.difficulty)"
+            size="mini"
+            type="warning"
+          />
           <uni-tag :text="getCategoryName(item.categoryId)" size="mini" type="success" />
           <text class="muted ml-auto">分值 {{ item.score }}</text>
         </view>
@@ -77,7 +83,8 @@
 <script setup>
 import { ref } from 'vue';
 import { onPullDownRefresh, onShow } from '@dcloudio/uni-app';
-import { fetchCategories, fetchRecommendedQuestions } from '@/api/mock.js';
+import { fetchCategoryTree, flattenCategoryTree, categoryNameById } from '@/api/categories.js';
+import { fetchPracticeRandom } from '@/api/questions.js';
 import { fetchProfile, getCachedProfile } from '@/api/user';
 import { emptyProgress, fetchProgressSummary } from '@/api/progress';
 
@@ -93,13 +100,14 @@ const user = ref(fallbackUser());
 const progress = ref(emptyProgress());
 const recommended = ref([]);
 const categories = ref([]);
+const categoryTree = ref([]);
 
 const loadData = async () => {
-  const [userResult, progressResult, catList, recommendList] = await Promise.allSettled([
+  const [userResult, progressResult, catTreeRes, recommendList] = await Promise.allSettled([
     fetchProfile(),
     fetchProgressSummary(),
-    fetchCategories(),
-    fetchRecommendedQuestions(),
+    fetchCategoryTree(),
+    fetchPracticeRandom({ limit: 3 }),
   ]);
   user.value =
     userResult.status === 'fulfilled' && userResult.value ? userResult.value : fallbackUser();
@@ -107,17 +115,31 @@ const loadData = async () => {
     progressResult.status === 'fulfilled' && progressResult.value
       ? progressResult.value
       : emptyProgress();
-  categories.value = catList.status === 'fulfilled' ? catList.value : [];
+  categoryTree.value = catTreeRes.status === 'fulfilled' ? catTreeRes.value : [];
+  categories.value =
+    catTreeRes.status === 'fulfilled' && Array.isArray(catTreeRes.value)
+      ? flattenCategoryTree(catTreeRes.value)
+      : [];
   recommended.value = recommendList.status === 'fulfilled' ? recommendList.value : [];
 };
 
 const renderType = (type) => {
-  if (type === 'multiple') return '多选';
-  if (type === 'truefalse') return '判断';
+  const t = String(type || '').toLowerCase();
+  if (t.includes('multiple')) return '多选';
+  if (t.includes('true') || t.includes('judge')) return '判断';
+  if (t.includes('fill') || t.includes('short')) return '简答';
   return '单选';
 };
 
-const getCategoryName = (id) => categories.value.find((c) => c.id === id)?.name || '未分类';
+const getCategoryName = (id) => categoryNameById(categories.value, id) || '未分类';
+
+const renderDifficulty = (difficulty) => {
+  if (!difficulty) return '不限难度';
+  if (difficulty === 'HARD') return '困难';
+  if (difficulty === 'MEDIUM') return '中等';
+  if (difficulty === 'EASY') return '容易';
+  return difficulty;
+};
 
 const goQuestionBank = () => {
   uni.switchTab({ url: '/pages/questions/index' });

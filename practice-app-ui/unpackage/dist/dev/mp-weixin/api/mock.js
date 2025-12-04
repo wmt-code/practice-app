@@ -422,124 +422,11 @@ function loadState() {
     common_vendor.index.__f__("warn", "at api/mock.js:427", "读取本地缓存失败", err);
   }
 }
-function persist() {
-  if (!hasUni)
-    return;
-  try {
-    common_vendor.index.setStorageSync(STORAGE_KEYS.user, state.user);
-    common_vendor.index.setStorageSync(STORAGE_KEYS.records, state.records);
-  } catch (err) {
-    common_vendor.index.__f__("warn", "at api/mock.js:437", "保存本地缓存失败", err);
-  }
-}
-function normalizeAnswer(answer = []) {
-  return [...answer].sort().join("|");
-}
-function shuffle(list = []) {
-  const arr = [...list];
-  for (let i = arr.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-function buildProgress() {
-  const totalQuestions = questions.length;
-  const answeredQuestions = new Set(state.records.map((r) => r.questionId)).size;
-  const correctCount = state.records.filter((r) => r.isCorrect).length;
-  const attemptCount = state.records.length;
-  const correctRate = attemptCount ? Math.round(correctCount / attemptCount * 100) : 0;
-  const categoriesProgress = categories.map((cat) => {
-    const catQuestions = questions.filter((q) => q.categoryId === cat.id);
-    const catRecords = state.records.filter(
-      (r) => catQuestions.some((q) => q.id === r.questionId)
-    );
-    const catCorrect = catRecords.filter((r) => r.isCorrect).length;
-    return {
-      ...cat,
-      total: catQuestions.length,
-      answered: catRecords.length,
-      correct: catCorrect,
-      correctRate: catRecords.length ? Math.round(catCorrect / catRecords.length * 100) : 0
-    };
-  });
-  return {
-    totalQuestions,
-    answeredQuestions,
-    correctCount,
-    correctRate,
-    points: state.user.points,
-    categories: categoriesProgress,
-    percent: totalQuestions ? Math.round(answeredQuestions / totalQuestions * 100) : 0
-  };
-}
 function delay(data, ms = 120) {
   return new Promise((resolve) => setTimeout(() => resolve(data), ms));
 }
-async function fetchCategoryTree() {
-  return delay(categoryTree.map((item) => ({ ...item, children: [...item.children] })));
-}
 async function fetchCategories() {
   return delay([...categories]);
-}
-async function fetchCategoryDetail(categoryId) {
-  const category = categories.find((c) => c.id === categoryId);
-  if (!category)
-    return delay(null);
-  const relatedQuestions = questions.filter((q) => q.categoryId === categoryId);
-  const answeredIds = new Set(
-    state.records.filter((r) => relatedQuestions.some((q) => q.id === r.questionId)).map((r) => r.questionId)
-  );
-  return delay({
-    ...category,
-    total: relatedQuestions.length,
-    answered: answeredIds.size,
-    lastUpdated: category.updatedAt
-  });
-}
-async function fetchQuestionDetail(id) {
-  const question = questionMap.get(id);
-  return delay(question ? { ...question } : null);
-}
-async function startPracticeSession({ categoryId, mode = "order", count } = {}) {
-  const base = questions.filter((q) => q.categoryId === categoryId);
-  const ordered = mode === "order" ? base : shuffle(base);
-  const limited = typeof count === "number" && count > 0 ? ordered.slice(0, Math.min(count, ordered.length)) : ordered;
-  const category = categories.find((c) => c.id === categoryId);
-  const parent = categoryTree.find((c) => c.id === (category == null ? void 0 : category.parentId));
-  return delay({
-    questions: limited.map((q) => ({ ...q })),
-    total: limited.length,
-    mode,
-    category,
-    parent
-  });
-}
-async function submitAnswer({ questionId, chosen = [], spentSeconds = 20 }) {
-  const question = questionMap.get(questionId);
-  if (!question) {
-    throw new Error("题目不存在");
-  }
-  const isCorrect = normalizeAnswer(chosen) === normalizeAnswer(question.answer);
-  const record = {
-    id: `rec-${Date.now()}`,
-    questionId,
-    chosen,
-    isCorrect,
-    score: isCorrect ? question.score : 0,
-    spentSeconds,
-    answeredAt: (/* @__PURE__ */ new Date()).toISOString()
-  };
-  state.records.unshift(record);
-  state.user.points += isCorrect ? 3 : 1;
-  persist();
-  return delay({
-    isCorrect,
-    correctAnswer: question.answer,
-    explanation: question.explanation,
-    record,
-    progress: buildProgress()
-  });
 }
 async function fetchRecords() {
   loadState();
@@ -549,18 +436,6 @@ async function fetchRecords() {
   }));
   return delay(mapped);
 }
-async function fetchRecommendedQuestions(limit = 3) {
-  const answered = new Set(state.records.map((r) => r.questionId));
-  const candidates = questions.filter((q) => !answered.has(q.id));
-  const pick = candidates.slice(0, limit);
-  return delay(pick.length ? pick : questions.slice(0, limit));
-}
 exports.fetchCategories = fetchCategories;
-exports.fetchCategoryDetail = fetchCategoryDetail;
-exports.fetchCategoryTree = fetchCategoryTree;
-exports.fetchQuestionDetail = fetchQuestionDetail;
-exports.fetchRecommendedQuestions = fetchRecommendedQuestions;
 exports.fetchRecords = fetchRecords;
-exports.startPracticeSession = startPracticeSession;
-exports.submitAnswer = submitAnswer;
 //# sourceMappingURL=../../.sourcemap/mp-weixin/api/mock.js.map

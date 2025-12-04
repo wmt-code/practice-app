@@ -1,6 +1,6 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
-const api_mock = require("../../api/mock.js");
+const api_categories = require("../../api/categories.js");
 if (!Array) {
   const _easycom_uni_easyinput2 = common_vendor.resolveComponent("uni-easyinput");
   const _easycom_uni_tag2 = common_vendor.resolveComponent("uni-tag");
@@ -20,7 +20,7 @@ const _sfc_main = {
     const selectedParent = common_vendor.ref("");
     const keyword = common_vendor.ref("");
     const childrenOfParent = common_vendor.computed(() => {
-      const parent = categoryTree.value.find((p) => p.id === selectedParent.value);
+      const parent = categoryTree.value.find((p) => String(p.id) === String(selectedParent.value));
       return parent ? parent.children : [];
     });
     const filteredChildren = common_vendor.computed(() => {
@@ -28,14 +28,18 @@ const _sfc_main = {
       if (!kw)
         return childrenOfParent.value;
       return childrenOfParent.value.filter(
-        (item) => item.name.toLowerCase().includes(kw) || (item.description || "").toLowerCase().includes(kw)
+        (item) => {
+          const name = (item.name || "").toLowerCase();
+          const desc = (item.description || item.badgeText || "").toLowerCase();
+          return name.includes(kw) || desc.includes(kw);
+        }
       );
     });
     const loadCategories = async () => {
-      const list = await api_mock.fetchCategoryTree();
+      const list = await api_categories.fetchCategoryTree();
       categoryTree.value = list;
       if (!selectedParent.value && list.length) {
-        selectedParent.value = list[0].id;
+        selectedParent.value = String(list[0].id);
       }
     };
     const switchParent = (id) => {
@@ -50,6 +54,13 @@ const _sfc_main = {
       common_vendor.index.navigateTo({
         url: `/pages/questions/category?categoryId=${item.id}`
       });
+    };
+    const renderDesc = (item) => {
+      if (item.description)
+        return item.description;
+      if (item.badgeText)
+        return item.badgeText;
+      return `共 ${item.questionCount || 0} 题`;
     };
     common_vendor.onShow(() => {
       loadCategories();
@@ -73,7 +84,7 @@ const _sfc_main = {
           return {
             a: common_vendor.t(parent.name),
             b: parent.id,
-            c: parent.id === selectedParent.value ? 1 : "",
+            c: String(parent.id) === String(selectedParent.value) ? 1 : "",
             d: common_vendor.o(($event) => switchParent(parent.id), parent.id)
           };
         }),
@@ -82,19 +93,19 @@ const _sfc_main = {
         g: common_vendor.f(filteredChildren.value, (item, k0, i0) => {
           return common_vendor.e({
             a: common_vendor.t(item.name),
-            b: item.badge
-          }, item.badge ? {
+            b: item.badgeText
+          }, item.badgeText ? {
             c: "29918ac5-1-" + i0,
             d: common_vendor.p({
-              text: item.badge,
+              text: item.badgeText,
               type: "warning",
               size: "mini"
             })
           } : {}, {
             e: "29918ac5-2-" + i0,
-            f: common_vendor.t(item.description || "点击进入详情与练习"),
+            f: common_vendor.t(renderDesc(item)),
             g: common_vendor.t(item.questionCount || 0),
-            h: common_vendor.t(item.updatedAt || "--"),
+            h: common_vendor.t(item.finishedCount || 0),
             i: item.id,
             j: common_vendor.o(($event) => goCategory(item), item.id)
           });

@@ -1,6 +1,7 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
-const api_mock = require("../../api/mock.js");
+const api_categories = require("../../api/categories.js");
+const api_questions = require("../../api/questions.js");
 const api_user = require("../../api/user.js");
 const api_progress = require("../../api/progress.js");
 if (!Array) {
@@ -30,28 +31,41 @@ const _sfc_main = {
     const progress = common_vendor.ref(api_progress.emptyProgress());
     const recommended = common_vendor.ref([]);
     const categories = common_vendor.ref([]);
+    const categoryTree = common_vendor.ref([]);
     const loadData = async () => {
-      const [userResult, progressResult, catList, recommendList] = await Promise.allSettled([
+      const [userResult, progressResult, catTreeRes, recommendList] = await Promise.allSettled([
         api_user.fetchProfile(),
         api_progress.fetchProgressSummary(),
-        api_mock.fetchCategories(),
-        api_mock.fetchRecommendedQuestions()
+        api_categories.fetchCategoryTree(),
+        api_questions.fetchPracticeRandom({ limit: 3 })
       ]);
       user.value = userResult.status === "fulfilled" && userResult.value ? userResult.value : fallbackUser();
       progress.value = progressResult.status === "fulfilled" && progressResult.value ? progressResult.value : api_progress.emptyProgress();
-      categories.value = catList.status === "fulfilled" ? catList.value : [];
+      categoryTree.value = catTreeRes.status === "fulfilled" ? catTreeRes.value : [];
+      categories.value = catTreeRes.status === "fulfilled" && Array.isArray(catTreeRes.value) ? api_categories.flattenCategoryTree(catTreeRes.value) : [];
       recommended.value = recommendList.status === "fulfilled" ? recommendList.value : [];
     };
     const renderType = (type) => {
-      if (type === "multiple")
+      const t = String(type || "").toLowerCase();
+      if (t.includes("multiple"))
         return "多选";
-      if (type === "truefalse")
+      if (t.includes("true") || t.includes("judge"))
         return "判断";
+      if (t.includes("fill") || t.includes("short"))
+        return "简答";
       return "单选";
     };
-    const getCategoryName = (id) => {
-      var _a;
-      return ((_a = categories.value.find((c) => c.id === id)) == null ? void 0 : _a.name) || "未分类";
+    const getCategoryName = (id) => api_categories.categoryNameById(categories.value, id) || "未分类";
+    const renderDifficulty = (difficulty) => {
+      if (!difficulty)
+        return "不限难度";
+      if (difficulty === "HARD")
+        return "困难";
+      if (difficulty === "MEDIUM")
+        return "中等";
+      if (difficulty === "EASY")
+        return "容易";
+      return difficulty;
     };
     const goQuestionBank = () => {
       common_vendor.index.switchTab({ url: "/pages/questions/index" });
@@ -126,28 +140,37 @@ const _sfc_main = {
         t: recommended.value.length
       }, recommended.value.length ? {
         v: common_vendor.f(recommended.value, (item, k0, i0) => {
-          return {
+          return common_vendor.e({
             a: "4978fed5-7-" + i0 + "," + ("4978fed5-6-" + i0),
             b: common_vendor.p({
               text: renderType(item.type),
               size: "mini",
               type: "primary"
             }),
-            c: "4978fed5-8-" + i0 + "," + ("4978fed5-6-" + i0),
-            d: common_vendor.p({
+            c: item.difficulty
+          }, item.difficulty ? {
+            d: "4978fed5-8-" + i0 + "," + ("4978fed5-6-" + i0),
+            e: common_vendor.p({
+              text: renderDifficulty(item.difficulty),
+              size: "mini",
+              type: "warning"
+            })
+          } : {}, {
+            f: "4978fed5-9-" + i0 + "," + ("4978fed5-6-" + i0),
+            g: common_vendor.p({
               text: getCategoryName(item.categoryId),
               size: "mini",
               type: "success"
             }),
-            e: common_vendor.t(item.score),
-            f: item.id,
-            g: common_vendor.o(($event) => goQuestion(item.id), item.id),
-            h: "4978fed5-6-" + i0,
-            i: common_vendor.p({
+            h: common_vendor.t(item.score),
+            i: item.id,
+            j: common_vendor.o(($event) => goQuestion(item.id), item.id),
+            k: "4978fed5-6-" + i0,
+            l: common_vendor.p({
               ["is-shadow"]: false,
               title: item.title
             })
-          };
+          });
         })
       } : {}, {
         w: common_vendor.o(goQuestionBank)

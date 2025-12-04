@@ -1,6 +1,8 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
-const api_mock = require("../../api/mock.js");
+const api_categories = require("../../api/categories.js");
+const api_questions = require("../../api/questions.js");
+const api_progress = require("../../api/progress.js");
 if (!Array) {
   const _easycom_uni_tag2 = common_vendor.resolveComponent("uni-tag");
   const _easycom_uni_icons2 = common_vendor.resolveComponent("uni-icons");
@@ -25,22 +27,33 @@ const _sfc_main = {
     const customCount = common_vendor.ref(5);
     const minCount = common_vendor.computed(() => 1);
     const loadData = async (categoryId) => {
-      const [tree, detail] = await Promise.all([
-        api_mock.fetchCategoryTree(),
-        api_mock.fetchCategoryDetail(categoryId)
-      ]);
-      const parent = tree.find((p) => p.children.some((c) => c.id === categoryId));
-      if (!detail) {
-        common_vendor.index.showToast({ title: "分类不存在", icon: "none" });
-        return;
+      try {
+        const [tree, practicePage, progressData] = await Promise.all([
+          api_categories.fetchCategoryTree(),
+          api_questions.fetchPracticeSequence({ categoryId, page: 1, size: 1 }),
+          api_progress.fetchProgressSummary()
+        ]);
+        const flat = api_categories.flattenCategoryTree(tree);
+        const current = flat.find((c) => `${c.id}` === `${categoryId}`);
+        const parent = flat.find((c) => c.id === (current == null ? void 0 : current.parentId));
+        if (!current) {
+          common_vendor.index.showToast({ title: "分类不存在", icon: "none" });
+          return;
+        }
+        category.value = current;
+        parentName.value = (parent == null ? void 0 : parent.name) || "题库";
+        const progressItem = Array.isArray(progressData == null ? void 0 : progressData.categories) ? progressData.categories.find((c) => `${c.id}` === `${categoryId}`) : null;
+        const total = practicePage.total || current.questionCount || 0;
+        summary.value = {
+          total,
+          answered: (progressItem == null ? void 0 : progressItem.answered) || (progressItem == null ? void 0 : progressItem.completedQuestions) || 0
+        };
+        const fallbackCount = total || 5;
+        customCount.value = Math.min(total || fallbackCount, customCount.value || fallbackCount);
+      } catch (err) {
+        common_vendor.index.__f__("error", "at pages/questions/category.vue:111", err);
+        common_vendor.index.showToast({ title: "加载失败", icon: "none" });
       }
-      category.value = detail;
-      parentName.value = (parent == null ? void 0 : parent.name) || "题库";
-      summary.value = {
-        total: detail.total,
-        answered: detail.answered
-      };
-      customCount.value = Math.min(detail.total, customCount.value || detail.total || 5);
     };
     const startPractice = (mode) => {
       if (!category.value)

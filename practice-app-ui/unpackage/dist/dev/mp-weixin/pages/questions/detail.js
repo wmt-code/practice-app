@@ -1,6 +1,8 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
-const api_mock = require("../../api/mock.js");
+const api_categories = require("../../api/categories.js");
+const api_questions = require("../../api/questions.js");
+const api_answers = require("../../api/answers.js");
 if (!Array) {
   const _easycom_uni_tag2 = common_vendor.resolveComponent("uni-tag");
   const _easycom_uni_card2 = common_vendor.resolveComponent("uni-card");
@@ -24,11 +26,19 @@ const _sfc_main = {
     const feedback = common_vendor.ref(null);
     const submitting = common_vendor.ref(false);
     const renderType = (type) => {
-      if (type === "multiple")
+      const t = String(type || "").toLowerCase();
+      if (t.includes("multiple"))
         return "多选";
-      if (type === "truefalse")
+      if (t.includes("true") || t.includes("judge"))
         return "判断";
+      if (t.includes("fill") || t.includes("short"))
+        return "简答";
       return "单选";
+    };
+    const isMultiple = (type) => String(type || "").toLowerCase().includes("multiple");
+    const isShortAnswer = (type) => {
+      const t = String(type || "").toLowerCase();
+      return t.includes("fill") || t.includes("short");
     };
     const onSingleChange = (e) => {
       selected.value = [e.detail.value];
@@ -36,36 +46,47 @@ const _sfc_main = {
     const onMultipleChange = (e) => {
       selected.value = e.detail.value || [];
     };
+    const onTextChange = (e) => {
+      selected.value = [e.detail.value || ""];
+    };
     const getCategoryName = (id) => {
       var _a;
-      return ((_a = categories.value.find((c) => c.id === id)) == null ? void 0 : _a.name) || "未分类";
+      return ((_a = categories.value.find((c) => String(c.id) === String(id))) == null ? void 0 : _a.name) || "未分类";
     };
     const backToList = () => {
       common_vendor.index.switchTab({ url: "/pages/questions/index" });
     };
     const loadData = async (id) => {
-      const [catList, detail] = await Promise.all([api_mock.fetchCategories(), api_mock.fetchQuestionDetail(id)]);
-      categories.value = catList;
-      if (!(detail == null ? void 0 : detail.id)) {
-        common_vendor.index.showToast({ title: "题目不存在", icon: "none" });
-        question.value = { options: [] };
-        return;
+      try {
+        const [catTree, detail] = await Promise.all([api_categories.fetchCategoryTree(), api_questions.fetchQuestionDetail(id)]);
+        categories.value = api_categories.flattenCategoryTree(catTree);
+        if (!(detail == null ? void 0 : detail.id)) {
+          common_vendor.index.showToast({ title: "题目不存在", icon: "none" });
+          question.value = { options: [] };
+          return;
+        }
+        question.value = detail;
+        selected.value = [];
+        feedback.value = null;
+      } catch (err) {
+        common_vendor.index.__f__("error", "at pages/questions/detail.vue:152", err);
+        common_vendor.index.showToast({ title: "加载失败", icon: "none" });
       }
-      question.value = detail;
     };
     const handleSubmit = async () => {
       if (!question.value.id)
         return;
-      if (!selected.value.length) {
+      const chosen = (selected.value || []).map((v) => typeof v === "string" ? v.trim() : v);
+      if (!chosen.length || !chosen.some((v) => v)) {
         common_vendor.index.showToast({ title: "请选择答案", icon: "none" });
         return;
       }
       submitting.value = true;
       try {
-        const res = await api_mock.submitAnswer({
+        const res = await api_answers.submitAnswer({
           questionId: question.value.id,
-          chosen: selected.value,
-          spentSeconds: question.value.duration || 20
+          chosen,
+          timeSpent: question.value.duration || 20
         });
         feedback.value = res;
         common_vendor.index.showToast({
@@ -73,7 +94,7 @@ const _sfc_main = {
           icon: res.isCorrect ? "success" : "none"
         });
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/detail.vue:149", err);
+        common_vendor.index.__f__("error", "at pages/questions/detail.vue:177", err);
         common_vendor.index.showToast({ title: "提交失败", icon: "none" });
       } finally {
         submitting.value = false;
@@ -99,8 +120,8 @@ const _sfc_main = {
           type: "primary"
         }),
         e: common_vendor.t(question.value.duration),
-        f: question.value.type === "multiple"
-      }, question.value.type === "multiple" ? {
+        f: isMultiple(question.value.type)
+      }, isMultiple(question.value.type) ? {
         g: common_vendor.f(question.value.options, (opt, k0, i0) => {
           return {
             a: opt.value,
@@ -111,8 +132,11 @@ const _sfc_main = {
           };
         }),
         h: common_vendor.o(onMultipleChange)
+      } : isShortAnswer(question.value.type) ? {
+        j: selected.value[0] || "",
+        k: common_vendor.o(onTextChange)
       } : {
-        i: common_vendor.f(question.value.options, (opt, k0, i0) => {
+        l: common_vendor.f(question.value.options, (opt, k0, i0) => {
           return {
             a: opt.value,
             b: selected.value.includes(opt.value),
@@ -121,33 +145,34 @@ const _sfc_main = {
             e: opt.value
           };
         }),
-        j: common_vendor.o(onSingleChange)
+        m: common_vendor.o(onSingleChange)
       }, {
-        k: submitting.value,
-        l: !selected.value.length,
-        m: common_vendor.o(handleSubmit),
-        n: common_vendor.o(backToList),
-        o: common_vendor.p({
+        i: isShortAnswer(question.value.type),
+        n: submitting.value,
+        o: !selected.value.length,
+        p: common_vendor.o(handleSubmit),
+        q: common_vendor.o(backToList),
+        r: common_vendor.p({
           ["is-shadow"]: false
         }),
-        p: feedback.value
+        s: feedback.value
       }, feedback.value ? common_vendor.e({
-        q: common_vendor.p({
+        t: common_vendor.p({
           type: feedback.value.isCorrect ? "checkmarkempty" : "closeempty",
           color: feedback.value.isCorrect ? "#10b981" : "#ef4444",
           size: "24"
         }),
-        r: common_vendor.t(feedback.value.isCorrect ? "回答正确" : "回答错误"),
-        s: feedback.value.isCorrect ? 1 : "",
-        t: !feedback.value.isCorrect ? 1 : "",
-        v: common_vendor.t(feedback.value.correctAnswer.join(", ")),
-        w: common_vendor.t(feedback.value.explanation),
-        x: feedback.value.progress
+        v: common_vendor.t(feedback.value.isCorrect ? "回答正确" : "回答错误"),
+        w: feedback.value.isCorrect ? 1 : "",
+        x: !feedback.value.isCorrect ? 1 : "",
+        y: common_vendor.t(feedback.value.correctAnswer.join(", ")),
+        z: common_vendor.t(feedback.value.explanation),
+        A: feedback.value.progress
       }, feedback.value.progress ? {
-        y: common_vendor.t(feedback.value.progress.points),
-        z: common_vendor.t(feedback.value.progress.percent)
+        B: common_vendor.t(feedback.value.progress.points),
+        C: common_vendor.t(feedback.value.progress.percent)
       } : {}, {
-        A: common_vendor.p({
+        D: common_vendor.p({
           title: "判题结果",
           ["is-shadow"]: false
         })

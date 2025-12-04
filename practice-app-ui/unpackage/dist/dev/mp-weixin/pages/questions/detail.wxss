@@ -35,6 +35,17 @@
 .option-area.data-v-5057af5f {
   margin-top: 12rpx;
 }
+.short-input.data-v-5057af5f {
+  width: 100%;
+  min-height: 160rpx;
+  padding: 14rpx;
+  border-radius: 12rpx;
+  border: 2rpx solid #e5e7eb;
+  background: #f9fafb;
+  box-sizing: border-box;
+  font-size: 28rpx;
+  color: #1f2937;
+}
 .option.data-v-5057af5f {
   display: flex;
   align-items: center;

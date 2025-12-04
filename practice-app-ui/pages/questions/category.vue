@@ -67,7 +67,9 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { onLoad, onPullDownRefresh } from '@dcloudio/uni-app';
-import { fetchCategoryDetail, fetchCategoryTree } from '@/api/mock.js';
+import { fetchCategoryTree, flattenCategoryTree } from '@/api/categories.js';
+import { fetchPracticeSequence } from '@/api/questions.js';
+import { fetchProgressSummary } from '@/api/progress';
 
 const category = ref(null);
 const parentName = ref('');
@@ -80,22 +82,35 @@ const customCount = ref(5);
 const minCount = computed(() => 1);
 
 const loadData = async (categoryId) => {
-  const [tree, detail] = await Promise.all([
-    fetchCategoryTree(),
-    fetchCategoryDetail(categoryId),
-  ]);
-  const parent = tree.find((p) => p.children.some((c) => c.id === categoryId));
-  if (!detail) {
-    uni.showToast({ title: '分类不存在', icon: 'none' });
-    return;
+  try {
+    const [tree, practicePage, progressData] = await Promise.all([
+      fetchCategoryTree(),
+      fetchPracticeSequence({ categoryId, page: 1, size: 1 }),
+      fetchProgressSummary(),
+    ]);
+    const flat = flattenCategoryTree(tree);
+    const current = flat.find((c) => `${c.id}` === `${categoryId}`);
+    const parent = flat.find((c) => c.id === current?.parentId);
+    if (!current) {
+      uni.showToast({ title: '分类不存在', icon: 'none' });
+      return;
+    }
+    category.value = current;
+    parentName.value = parent?.name || '题库';
+    const progressItem = Array.isArray(progressData?.categories)
+      ? progressData.categories.find((c) => `${c.id}` === `${categoryId}`)
+      : null;
+    const total = practicePage.total || current.questionCount || 0;
+    summary.value = {
+      total,
+      answered: progressItem?.answered || progressItem?.completedQuestions || 0,
+    };
+    const fallbackCount = total || 5;
+    customCount.value = Math.min(total || fallbackCount, customCount.value || fallbackCount);
+  } catch (err) {
+    console.error(err);
+    uni.showToast({ title: '加载失败', icon: 'none' });
   }
-  category.value = detail;
-  parentName.value = parent?.name || '题库';
-  summary.value = {
-    total: detail.total,
-    answered: detail.answered,
-  };
-  customCount.value = Math.min(detail.total, customCount.value || detail.total || 5);
 };
 
 const startPractice = (mode) => {

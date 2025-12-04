@@ -21,7 +21,7 @@
           v-for="parent in categoryTree"
           :key="parent.id"
           class="side-item"
-          :class="{ active: parent.id === selectedParent }"
+          :class="{ active: String(parent.id) === String(selectedParent) }"
           @tap="switchParent(parent.id)"
         >
           <text class="side-text">{{ parent.name }}</text>
@@ -39,14 +39,19 @@
             <view class="card-header">
               <view class="name">
                 <text class="sub-name">{{ item.name }}</text>
-                <uni-tag v-if="item.badge" :text="item.badge" type="warning" size="mini" />
+                <uni-tag
+                  v-if="item.badgeText"
+                  :text="item.badgeText"
+                  type="warning"
+                  size="mini"
+                />
               </view>
               <uni-icons type="arrowright" color="#9ca3af" size="20" />
             </view>
-            <view class="desc">{{ item.description || '点击进入详情与练习' }}</view>
+            <view class="desc">{{ renderDesc(item) }}</view>
             <view class="meta-row">
               <text class="muted">题量 {{ item.questionCount || 0 }}</text>
-              <text class="muted">最近更新 {{ item.updatedAt || '--' }}</text>
+              <text class="muted">已做 {{ item.finishedCount || 0 }}</text>
             </view>
           </view>
         </view>
@@ -61,14 +66,14 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { onPullDownRefresh, onShow } from '@dcloudio/uni-app';
-import { fetchCategoryTree } from '@/api/mock.js';
+import { fetchCategoryTree } from '@/api/categories.js';
 
 const categoryTree = ref([]);
 const selectedParent = ref('');
 const keyword = ref('');
 
 const childrenOfParent = computed(() => {
-  const parent = categoryTree.value.find((p) => p.id === selectedParent.value);
+  const parent = categoryTree.value.find((p) => String(p.id) === String(selectedParent.value));
   return parent ? parent.children : [];
 });
 
@@ -76,9 +81,11 @@ const filteredChildren = computed(() => {
   const kw = keyword.value.trim().toLowerCase();
   if (!kw) return childrenOfParent.value;
   return childrenOfParent.value.filter(
-    (item) =>
-      item.name.toLowerCase().includes(kw) ||
-      (item.description || '').toLowerCase().includes(kw),
+    (item) => {
+      const name = (item.name || '').toLowerCase();
+      const desc = (item.description || item.badgeText || '').toLowerCase();
+      return name.includes(kw) || desc.includes(kw);
+    },
   );
 });
 
@@ -86,7 +93,7 @@ const loadCategories = async () => {
   const list = await fetchCategoryTree();
   categoryTree.value = list;
   if (!selectedParent.value && list.length) {
-    selectedParent.value = list[0].id;
+    selectedParent.value = String(list[0].id);
   }
 };
 
@@ -106,6 +113,12 @@ const goCategory = (item) => {
   uni.navigateTo({
     url: `/pages/questions/category?categoryId=${item.id}`,
   });
+};
+
+const renderDesc = (item) => {
+  if (item.description) return item.description;
+  if (item.badgeText) return item.badgeText;
+  return `共 ${item.questionCount || 0} 题`;
 };
 
 onShow(() => {
