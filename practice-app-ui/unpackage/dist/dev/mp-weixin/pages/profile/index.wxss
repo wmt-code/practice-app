@@ -67,3 +67,45 @@
 .muted.data-v-201c0da5 {
   color: #6b7280;
 }
+.overlay.data-v-201c0da5 {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx;
+  box-sizing: border-box;
+  z-index: 999;
+}
+.profile-popup.data-v-201c0da5 {
+  width: 100%;
+  max-width: 620rpx;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 32rpx;
+  box-shadow: 0 12rpx 32rpx rgba(0, 0, 0, 0.12);
+}
+.popup-title.data-v-201c0da5 {
+  font-size: 32rpx;
+  font-weight: 700;
+  margin-bottom: 16rpx;
+  text-align: center;
+}
+.popup-row.data-v-201c0da5 {
+  margin-bottom: 12rpx;
+}
+.popup-field.data-v-201c0da5 {
+  margin: 16rpx 0;
+}
+.popup-actions.data-v-201c0da5 {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 12rpx;
+}
+.popup-actions .ghost-btn.data-v-201c0da5,
+.popup-actions .primary-btn.data-v-201c0da5 {
+  flex: 1;
+  width: auto;
+  margin-top: 0;
+}

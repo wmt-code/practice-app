@@ -343,4 +343,53 @@ onShow(() => {
   .muted {
     color: #6b7280;
   }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40rpx;
+    box-sizing: border-box;
+    z-index: 999;
+  }
+
+  .profile-popup {
+    width: 100%;
+    max-width: 620rpx;
+    background: #fff;
+    border-radius: 24rpx;
+    padding: 32rpx;
+    box-shadow: 0 12rpx 32rpx rgba(0, 0, 0, 0.12);
+  }
+
+  .popup-title {
+    font-size: 32rpx;
+    font-weight: 700;
+    margin-bottom: 16rpx;
+    text-align: center;
+  }
+
+  .popup-row {
+    margin-bottom: 12rpx;
+  }
+
+  .popup-field {
+    margin: 16rpx 0;
+  }
+
+  .popup-actions {
+    display: flex;
+    gap: 12rpx;
+    margin-top: 12rpx;
+  }
+
+  .popup-actions .ghost-btn,
+  .popup-actions .primary-btn {
+    flex: 1;
+    width: auto;
+    margin-top: 0;
+  }
   </style>

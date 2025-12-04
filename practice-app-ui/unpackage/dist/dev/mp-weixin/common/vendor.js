@@ -7079,7 +7079,7 @@ function isConsoleWritable() {
 function initRuntimeSocketService() {
   const hosts = "192.168.120.15,127.0.0.1,192.168.80.1";
   const port = "8090";
-  const id = "mp-weixin_4vyDrt";
+  const id = "mp-weixin_1YyN6x";
   const lazy = typeof swan !== "undefined";
   let restoreError = lazy ? () => {
   } : initOnError();
