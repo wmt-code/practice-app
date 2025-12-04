@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -23,7 +24,7 @@ import java.time.LocalDateTime;
 @Accessors(chain = true)
 @TableName("user_wrong_answers")
 public class UserWrongAnswers implements Serializable {
-
+    @Serial
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "id", type = IdType.AUTO)
@@ -38,6 +39,8 @@ public class UserWrongAnswers implements Serializable {
     private String correctAnswer;
 
     private LocalDateTime attemptedAt;
+
+    private Integer wrongCount;
 
 
 }

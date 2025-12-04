@@ -78,6 +78,7 @@ CREATE TABLE `user_wrong_answers` (
     `question_id` BIGINT UNSIGNED NOT NULL,
     `user_answer` TEXT NOT NULL,
     `correct_answer` TEXT NOT NULL,
+    `wrong_count` INT NOT NULL DEFAULT 1 COMMENT '累计答错次数',
     `attempted_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

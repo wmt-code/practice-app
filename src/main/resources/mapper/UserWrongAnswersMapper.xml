@@ -2,4 +2,36 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.tb.practiceapp.mapper.UserWrongAnswersMapper">
 
+    <resultMap id="WrongQuestionVOMap" type="com.tb.practiceapp.model.vo.answer.WrongQuestionVO">
+        <id column="id" property="wrongId"/>
+        <result column="question_id" property="questionId"/>
+        <result column="question_title" property="questionTitle"/>
+        <result column="difficulty" property="difficulty"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="category_name" property="categoryName"/>
+        <result column="user_answer" property="userAnswer"/>
+        <result column="correct_answer" property="correctAnswer"/>
+        <result column="wrong_count" property="wrongCount"/>
+        <result column="attempted_at" property="lastAttemptedAt"/>
+    </resultMap>
+
+    <select id="pageWrong" resultMap="WrongQuestionVOMap">
+        SELECT
+            uwa.id,
+            uwa.question_id,
+            q.title AS question_title,
+            q.difficulty,
+            q.category_id,
+            c.name AS category_name,
+            uwa.user_answer,
+            uwa.correct_answer,
+            uwa.wrong_count,
+            uwa.attempted_at
+        FROM user_wrong_answers uwa
+        LEFT JOIN question q ON uwa.question_id = q.id
+        LEFT JOIN category c ON q.category_id = c.id
+        WHERE uwa.user_id = #{userId}
+        ORDER BY uwa.attempted_at DESC
+    </select>
+
 </mapper>
