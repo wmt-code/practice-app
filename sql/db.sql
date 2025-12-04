@@ -84,9 +84,13 @@ CREATE TABLE `user_wrong_answers` (
 CREATE TABLE `quiz` (
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `title` VARCHAR(100) NOT NULL,
+    `description` TEXT,
+    `status` VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
     `category_id` BIGINT UNSIGNED,
     `start_time` TIMESTAMP,
     `end_time` TIMESTAMP,
+    `time_limit` INT DEFAULT NULL COMMENT '测验限时（秒）',
+    `question_ids` TEXT COMMENT '题目ID JSON数组',
     `total_score` INT NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

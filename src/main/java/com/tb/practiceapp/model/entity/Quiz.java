@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
@@ -23,7 +24,7 @@ import java.time.LocalDateTime;
 @Accessors(chain = true)
 @TableName("quiz")
 public class Quiz implements Serializable {
-
+    @Serial
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "id", type = IdType.AUTO)
@@ -31,11 +32,28 @@ public class Quiz implements Serializable {
 
     private String title;
 
+    private String description;
+
+    /**
+     * DRAFT / PUBLISHED / CLOSED
+     */
+    private String status;
+
     private Long categoryId;
 
     private LocalDateTime startTime;
 
     private LocalDateTime endTime;
+
+    /**
+     * 限时（秒）
+     */
+    private Integer timeLimit;
+
+    /**
+     * 题目 ID 列表，JSON 数组字符串
+     */
+    private String questionIds;
 
     private Integer totalScore;
 
