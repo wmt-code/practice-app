@@ -11,4 +11,18 @@ public class CategoryRequest {
     private String name;
 
     private String description;
+
+    private Long parentId;
+
+    private Integer sort;
+
+    /**
+     * 1 启用, 0 停用
+     */
+    private Integer status;
+
+    /**
+     * 可选的前端标签文案
+     */
+    private String badgeText;
 }

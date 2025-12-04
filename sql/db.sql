@@ -34,6 +34,11 @@ CREATE TABLE `category` (
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `name` VARCHAR(100) NOT NULL,
     `description` TEXT,
+    `parent_id` BIGINT UNSIGNED DEFAULT 0,
+    `sort` INT DEFAULT 0,
+    `status` TINYINT NOT NULL DEFAULT 1,
+    `deleted` TINYINT NOT NULL DEFAULT 0,
+    `badge_text` VARCHAR(50),
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

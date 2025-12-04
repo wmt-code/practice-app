@@ -2,4 +2,10 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.tb.practiceapp.mapper.CategoryMapper">
 
+    <select id="selectQuestionCounts" resultType="com.tb.practiceapp.model.dto.category.CategoryQuestionCount">
+        SELECT category_id AS categoryId, COUNT(*) AS questionCount
+        FROM question
+        GROUP BY category_id
+    </select>
+
 </mapper>

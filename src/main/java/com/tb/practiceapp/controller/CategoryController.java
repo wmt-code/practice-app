@@ -4,6 +4,7 @@ import com.tb.practiceapp.common.ApiResponse;
 import com.tb.practiceapp.common.LoginRequired;
 import com.tb.practiceapp.model.dto.category.CategoryRequest;
 import com.tb.practiceapp.model.entity.Category;
+import com.tb.practiceapp.model.vo.category.CategoryTreeVO;
 import com.tb.practiceapp.service.ICategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,11 @@ public class CategoryController {
     @GetMapping
     public ApiResponse<List<Category>> list() {
         return ApiResponse.ok(categoryService.list());
+    }
+
+    @GetMapping("/tree")
+    public ApiResponse<List<CategoryTreeVO>> tree() {
+        return ApiResponse.ok(categoryService.getCategoryTree());
     }
 
     @PostMapping
