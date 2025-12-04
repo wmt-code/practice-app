@@ -137,7 +137,7 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
     private QuestionPracticeVO convertToPracticeVO(Question question) {
         QuestionPracticeVO vo = new QuestionPracticeVO();
         vo.setId(question.getId());
-        vo.setTitle(question.getTitle());
+        vo.setContent(question.getTitle());
         vo.setType(question.getType());
         vo.setDifficulty(question.getDifficulty());
         vo.setScore(question.getScore());

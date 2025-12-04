@@ -2,9 +2,10 @@ package com.tb.practiceapp.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.tb.practiceapp.common.PageResponse;
-import com.tb.practiceapp.model.dto.answer.AnswerHistoryItem;
-import com.tb.practiceapp.model.dto.answer.AnswerSubmitRequest;
 import com.tb.practiceapp.model.entity.UserAnswer;
+import com.tb.practiceapp.model.dto.answer.AnswerSubmitDTO;
+import com.tb.practiceapp.model.vo.answer.AnswerHistoryVO;
+import com.tb.practiceapp.model.vo.answer.AnswerResultVO;
 
 /**
  * <p>
@@ -16,7 +17,7 @@ import com.tb.practiceapp.model.entity.UserAnswer;
  */
 public interface IUserAnswerService extends IService<UserAnswer> {
 
-    UserAnswer submitAnswer(Long userId, AnswerSubmitRequest request);
+    AnswerResultVO submitAnswer(Long userId, AnswerSubmitDTO request);
 
-    PageResponse<AnswerHistoryItem> history(Long userId, long page, long size);
+    PageResponse<AnswerHistoryVO> history(Long userId, long page, long size);
 }
