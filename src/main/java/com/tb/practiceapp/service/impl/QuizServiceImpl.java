@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tb.practiceapp.common.BusinessException;
 import com.tb.practiceapp.common.ErrorCode;
 import com.tb.practiceapp.mapper.QuizMapper;
-import com.tb.practiceapp.mapper.UserQuizRecordMapper;
 import com.tb.practiceapp.model.dto.answer.AnswerSubmitDTO;
 import com.tb.practiceapp.model.dto.quiz.QuizCreateDTO;
 import com.tb.practiceapp.model.dto.quiz.QuizSubmitDTO;
@@ -164,7 +163,7 @@ public class QuizServiceImpl extends ServiceImpl<QuizMapper, Quiz> implements IQ
 
     @Override
     public QuizStatsVO stats(Long quizId) {
-        List<UserQuizRecord> records = userQuizRecordMapper.selectList(new LambdaQueryWrapper<UserQuizRecord>()
+        List<UserQuizRecord> records = userQuizRecordService.list(new LambdaQueryWrapper<UserQuizRecord>()
                 .eq(UserQuizRecord::getQuizId, quizId));
         QuizStatsVO vo = new QuizStatsVO();
         vo.setQuizId(quizId);
