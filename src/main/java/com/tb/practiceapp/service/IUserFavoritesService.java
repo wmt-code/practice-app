@@ -1,7 +1,9 @@
 package com.tb.practiceapp.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tb.practiceapp.model.entity.UserFavorites;
+import com.tb.practiceapp.model.vo.user.UserFavoriteVO;
 
 /**
  * <p>
@@ -13,4 +15,9 @@ import com.tb.practiceapp.model.entity.UserFavorites;
  */
 public interface IUserFavoritesService extends IService<UserFavorites> {
 
+    void addFavorite(Long userId, Long questionId);
+
+    void removeFavorite(Long userId, Long questionId);
+
+    Page<UserFavoriteVO> pageFavorites(Long userId, long page, long size);
 }
