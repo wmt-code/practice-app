@@ -1,11 +1,14 @@
 package com.tb.practiceapp.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.tb.practiceapp.model.dto.question.QuestionCreateRequest;
 import com.tb.practiceapp.model.dto.question.QuestionQueryRequest;
 import com.tb.practiceapp.model.dto.question.QuestionUpdateRequest;
 import com.tb.practiceapp.model.entity.Question;
+import com.tb.practiceapp.model.vo.question.QuestionPracticeVO;
+
+import java.util.List;
 
 /**
  * <p>
@@ -26,4 +29,8 @@ public interface IQuestionService extends IService<Question> {
     Question getByIdCached(Long id);
 
     Page<Question> query(QuestionQueryRequest request);
+
+    Page<QuestionPracticeVO> practiceSequence(Long categoryId, String difficulty, long page, long size);
+
+    List<QuestionPracticeVO> practiceRandom(Long categoryId, String difficulty, int limit);
 }

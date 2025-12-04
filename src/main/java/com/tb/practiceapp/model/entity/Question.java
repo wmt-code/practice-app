@@ -1,6 +1,7 @@
 package com.tb.practiceapp.model.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -33,9 +34,28 @@ public class Question implements Serializable {
 
     private String type;
 
+    /**
+     * 选项 JSON 字符串，存储数组结构
+     */
+    @TableField("options")
+    private String optionsJson;
+
     private String answer;
 
-    private String options;
+    /**
+     * 分值
+     */
+    private Integer score;
+
+    /**
+     * 建议作答时长（秒）
+     */
+    private Integer duration;
+
+    /**
+     * 题目解析
+     */
+    private String explanation;
 
     private Long categoryId;
 

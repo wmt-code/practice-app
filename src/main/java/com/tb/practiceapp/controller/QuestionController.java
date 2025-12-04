@@ -8,6 +8,7 @@ import com.tb.practiceapp.model.dto.question.QuestionCreateRequest;
 import com.tb.practiceapp.model.dto.question.QuestionQueryRequest;
 import com.tb.practiceapp.model.dto.question.QuestionUpdateRequest;
 import com.tb.practiceapp.model.entity.Question;
+import com.tb.practiceapp.model.vo.question.QuestionPracticeVO;
 import com.tb.practiceapp.service.IQuestionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/questions")
@@ -68,5 +71,22 @@ public class QuestionController {
         Page<Question> pageResult = questionService.query(request);
         PageResponse<Question> response = new PageResponse<>(pageResult.getCurrent(), pageResult.getSize(), pageResult.getTotal(), pageResult.getRecords());
         return ApiResponse.ok(response);
+    }
+
+    @GetMapping("/practice/sequence")
+    public ApiResponse<PageResponse<QuestionPracticeVO>> practiceSequence(@RequestParam(required = false) Long categoryId,
+                                                                          @RequestParam(required = false) String difficulty,
+                                                                          @RequestParam(defaultValue = "1") long page,
+                                                                          @RequestParam(defaultValue = "10") long size) {
+        Page<QuestionPracticeVO> res = questionService.practiceSequence(categoryId, difficulty, page, size);
+        PageResponse<QuestionPracticeVO> response = new PageResponse<>(res.getCurrent(), res.getSize(), res.getTotal(), res.getRecords());
+        return ApiResponse.ok(response);
+    }
+
+    @GetMapping("/practice/random")
+    public ApiResponse<List<QuestionPracticeVO>> practiceRandom(@RequestParam(required = false) Long categoryId,
+                                                                @RequestParam(required = false) String difficulty,
+                                                                @RequestParam(defaultValue = "5") int limit) {
+        return ApiResponse.ok(questionService.practiceRandom(categoryId, difficulty, limit));
     }
 }
