@@ -5,19 +5,66 @@ const api_questions = require("../../api/questions.js");
 const api_progress = require("../../api/progress.js");
 if (!Array) {
   const _easycom_uni_tag2 = common_vendor.resolveComponent("uni-tag");
+  const _easycom_uni_load_more2 = common_vendor.resolveComponent("uni-load-more");
   const _easycom_uni_icons2 = common_vendor.resolveComponent("uni-icons");
   const _easycom_uni_easyinput2 = common_vendor.resolveComponent("uni-easyinput");
-  (_easycom_uni_tag2 + _easycom_uni_icons2 + _easycom_uni_easyinput2)();
+  (_easycom_uni_tag2 + _easycom_uni_load_more2 + _easycom_uni_icons2 + _easycom_uni_easyinput2)();
 }
 const _easycom_uni_tag = () => "../../uni_modules/uni-tag/components/uni-tag/uni-tag.js";
+const _easycom_uni_load_more = () => "../../uni_modules/uni-load-more/components/uni-load-more/uni-load-more.js";
 const _easycom_uni_icons = () => "../../uni_modules/uni-icons/components/uni-icons/uni-icons.js";
 const _easycom_uni_easyinput = () => "../../uni_modules/uni-easyinput/components/uni-easyinput/uni-easyinput.js";
 if (!Math) {
-  (_easycom_uni_tag + _easycom_uni_icons + _easycom_uni_easyinput)();
+  (_easycom_uni_tag + _easycom_uni_load_more + _easycom_uni_icons + _easycom_uni_easyinput)();
 }
 const _sfc_main = {
   __name: "category",
   setup(__props) {
+    const navigateWithFallback = (url, { timeout = 1500 } = {}) => new Promise((resolve, reject) => {
+      let settled = false;
+      const clear = () => {
+        settled = true;
+        if (timer)
+          clearTimeout(timer);
+      };
+      const timer = setTimeout(() => {
+        if (settled)
+          return;
+        common_vendor.index.redirectTo({
+          url,
+          success: () => {
+            clear();
+            resolve();
+          },
+          fail: (err) => {
+            clear();
+            reject(err);
+          }
+        });
+      }, timeout);
+      common_vendor.index.navigateTo({
+        url,
+        success: () => {
+          clear();
+          resolve();
+        },
+        fail: (err) => {
+          if (settled)
+            return;
+          common_vendor.index.redirectTo({
+            url,
+            success: () => {
+              clear();
+              resolve();
+            },
+            fail: (redirectErr) => {
+              clear();
+              reject(redirectErr || err);
+            }
+          });
+        }
+      });
+    });
     const category = common_vendor.ref(null);
     const parentName = common_vendor.ref("");
     const summary = common_vendor.ref({
@@ -25,14 +72,13 @@ const _sfc_main = {
       answered: 0
     });
     const customCount = common_vendor.ref(5);
+    const loading = common_vendor.ref(false);
+    const navigating = common_vendor.ref(false);
     const minCount = common_vendor.computed(() => 1);
     const loadData = async (categoryId) => {
+      loading.value = true;
       try {
-        const [tree, practicePage, progressData] = await Promise.all([
-          api_categories.fetchCategoryTree(),
-          api_questions.fetchPracticeSequence({ categoryId, page: 1, size: 1 }),
-          api_progress.fetchProgressSummary()
-        ]);
+        const tree = await api_categories.fetchCategoryTree();
         const flat = api_categories.flattenCategoryTree(tree);
         const current = flat.find((c) => `${c.id}` === `${categoryId}`);
         const parent = flat.find((c) => c.id === (current == null ? void 0 : current.parentId));
@@ -42,30 +88,76 @@ const _sfc_main = {
         }
         category.value = current;
         parentName.value = (parent == null ? void 0 : parent.name) || "题库";
-        const progressItem = Array.isArray(progressData == null ? void 0 : progressData.categories) ? progressData.categories.find((c) => `${c.id}` === `${categoryId}`) : null;
-        const total = practicePage.total || current.questionCount || 0;
+        const baseTotal = current.questionCount || 0;
         summary.value = {
-          total,
-          answered: (progressItem == null ? void 0 : progressItem.answered) || (progressItem == null ? void 0 : progressItem.completedQuestions) || 0
+          total: baseTotal,
+          answered: 0
         };
-        const fallbackCount = total || 5;
-        customCount.value = Math.min(total || fallbackCount, customCount.value || fallbackCount);
+        const fallbackCount = baseTotal || 5;
+        customCount.value = Math.min(baseTotal || fallbackCount, customCount.value || fallbackCount);
+        loading.value = false;
+        api_questions.fetchPracticeSequence({ categoryId, page: 1, size: 1 }).then((practicePage) => {
+          const total = practicePage.total || baseTotal;
+          summary.value = {
+            ...summary.value,
+            total
+          };
+          customCount.value = Math.min(total || fallbackCount, customCount.value || fallbackCount);
+        }).catch((err) => {
+          common_vendor.index.__f__("warn", "at pages/questions/category.vue:185", "practice sequence fallback to cached count", err);
+        });
+        api_progress.fetchProgressSummary().then((progressData) => {
+          const progressItem = Array.isArray(progressData == null ? void 0 : progressData.categories) ? progressData.categories.find((c) => `${c.id}` === `${categoryId}`) : null;
+          if (progressItem) {
+            summary.value = {
+              ...summary.value,
+              answered: progressItem.answered || progressItem.completedQuestions || 0
+            };
+          }
+        }).catch((err) => {
+          common_vendor.index.__f__("warn", "at pages/questions/category.vue:202", "progress summary skipped", err);
+        });
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/category.vue:111", err);
+        common_vendor.index.__f__("error", "at pages/questions/category.vue:205", err);
         common_vendor.index.showToast({ title: "加载失败", icon: "none" });
+        loading.value = false;
       }
     };
-    const startPractice = (mode) => {
-      if (!category.value)
+    const normalizeRandomCount = () => {
+      const total = summary.value.total || 0;
+      if (!total)
+        return 0;
+      const raw = Number(customCount.value) || 0;
+      const clamped = Math.min(Math.max(raw, minCount.value), total);
+      return clamped;
+    };
+    const startPractice = async (mode) => {
+      if (loading.value) {
+        common_vendor.index.showToast({ title: "数据加载中，请稍后", icon: "none" });
         return;
+      }
+      if (!category.value) {
+        common_vendor.index.showToast({ title: "分类信息未加载", icon: "none" });
+        return;
+      }
       if (!summary.value.total) {
         common_vendor.index.showToast({ title: "该分类暂无题目", icon: "none" });
         return;
       }
-      const count = mode === "random" ? Math.min(Math.max(customCount.value || 0, minCount.value), summary.value.total || 0) : summary.value.total;
-      common_vendor.index.navigateTo({
-        url: `/pages/questions/practice?categoryId=${category.value.id}&mode=${mode}&count=${count}`
-      });
+      const isRandom = mode === "random";
+      const count = isRandom ? normalizeRandomCount() : 0;
+      if (navigating.value)
+        return;
+      navigating.value = true;
+      const url = `/pages/questions/practice?categoryId=${category.value.id}&mode=${mode}&count=${count}`;
+      try {
+        await navigateWithFallback(url, { timeout: 1200 });
+      } catch (err) {
+        common_vendor.index.__f__("error", "at pages/questions/category.vue:240", "navigate to practice failed", err);
+        common_vendor.index.showToast({ title: "打开练习页失败，请重试", icon: "none" });
+      } finally {
+        navigating.value = false;
+      }
     };
     const startOrder = () => startPractice("order");
     const startRandom = () => startPractice("random");
@@ -99,32 +191,43 @@ const _sfc_main = {
         g: common_vendor.t(summary.value.answered),
         h: common_vendor.t(category.value.updatedAt || "--")
       } : {}, {
-        i: common_vendor.p({
+        i: loading.value
+      }, loading.value ? {
+        j: common_vendor.p({
+          status: "loading",
+          iconType: "circle"
+        })
+      } : {
+        k: common_vendor.p({
           type: "redo",
           size: "22",
           color: "#fff"
         }),
-        j: common_vendor.t(summary.value.total),
-        k: common_vendor.t(summary.value.answered),
-        l: common_vendor.o(startOrder),
-        m: common_vendor.o(startOrder),
-        n: common_vendor.p({
+        l: common_vendor.t(summary.value.total),
+        m: common_vendor.t(summary.value.answered),
+        n: !summary.value.total || loading.value || navigating.value,
+        o: loading.value || navigating.value,
+        p: common_vendor.o(startOrder),
+        q: common_vendor.o(startOrder),
+        r: common_vendor.p({
           type: "hand-up",
           size: "22",
           color: "#111827"
         }),
-        o: common_vendor.o(common_vendor.m(($event) => customCount.value = $event, {
+        s: common_vendor.o(common_vendor.m(($event) => customCount.value = $event, {
           number: true
         }, true)),
-        p: common_vendor.p({
+        t: common_vendor.p({
           type: "number",
           placeholder: "输入数量",
           clearable: false,
           inputBorder: true,
           modelValue: customCount.value
         }),
-        q: common_vendor.t(summary.value.total),
-        r: common_vendor.o(startRandom)
+        v: common_vendor.t(summary.value.total),
+        w: !summary.value.total || loading.value || navigating.value,
+        x: loading.value || navigating.value,
+        y: common_vendor.o(startRandom)
       });
     };
   }

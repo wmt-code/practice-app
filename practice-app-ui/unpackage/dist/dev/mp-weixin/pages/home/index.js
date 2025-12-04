@@ -46,13 +46,16 @@ const _sfc_main = {
       recommended.value = recommendList.status === "fulfilled" ? recommendList.value : [];
     };
     const renderType = (type) => {
-      const t = String(type || "").toLowerCase();
-      if (t.includes("multiple"))
+      const text = String(type || "");
+      const lower = text.toLowerCase();
+      if (lower.includes("multiple") || text.includes("多选"))
         return "多选";
-      if (t.includes("true") || t.includes("judge"))
+      if (lower.includes("true") || lower.includes("judge") || text.includes("判断") || text.includes("是非")) {
         return "判断";
-      if (t.includes("fill") || t.includes("short"))
+      }
+      if (lower.includes("fill") || lower.includes("short") || text.includes("填空") || text.includes("简答")) {
         return "简答";
+      }
       return "单选";
     };
     const getCategoryName = (id) => api_categories.categoryNameById(categories.value, id) || "未分类";

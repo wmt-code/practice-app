@@ -3,17 +3,20 @@ const common_vendor = require("../../common/vendor.js");
 const api_questions = require("../../api/questions.js");
 const api_answers = require("../../api/answers.js");
 const api_categories = require("../../api/categories.js");
+const api_favorites = require("../../api/favorites.js");
 if (!Array) {
   const _easycom_uni_tag2 = common_vendor.resolveComponent("uni-tag");
   const _easycom_uni_load_more2 = common_vendor.resolveComponent("uni-load-more");
   const _easycom_uni_icons2 = common_vendor.resolveComponent("uni-icons");
-  (_easycom_uni_tag2 + _easycom_uni_load_more2 + _easycom_uni_icons2)();
+  const _easycom_uni_fav2 = common_vendor.resolveComponent("uni-fav");
+  (_easycom_uni_tag2 + _easycom_uni_load_more2 + _easycom_uni_icons2 + _easycom_uni_fav2)();
 }
 const _easycom_uni_tag = () => "../../uni_modules/uni-tag/components/uni-tag/uni-tag.js";
 const _easycom_uni_load_more = () => "../../uni_modules/uni-load-more/components/uni-load-more/uni-load-more.js";
 const _easycom_uni_icons = () => "../../uni_modules/uni-icons/components/uni-icons/uni-icons.js";
+const _easycom_uni_fav = () => "../../uni_modules/uni-fav/components/uni-fav/uni-fav.js";
 if (!Math) {
-  (_easycom_uni_tag + _easycom_uni_load_more + _easycom_uni_icons)();
+  (_easycom_uni_tag + _easycom_uni_load_more + _easycom_uni_icons + _easycom_uni_fav)();
 }
 const _sfc_main = {
   __name: "practice",
@@ -41,31 +44,65 @@ const _sfc_main = {
     const feedback = common_vendor.reactive({});
     const submitting = common_vendor.ref(false);
     const loading = common_vendor.ref(false);
+    const favoriteMap = common_vendor.reactive({});
+    const stats = common_vendor.reactive({
+      correct: 0,
+      wrong: 0
+    });
+    const resultShown = common_vendor.ref(false);
     const currentQuestionId = common_vendor.computed(() => {
       var _a;
       return (_a = questions.value[currentIndex.value]) == null ? void 0 : _a.id;
     });
-    const currentSelected = common_vendor.computed(() => answers[currentQuestionId.value] || []);
-    const hasAnswered = common_vendor.computed(() => Boolean(feedback[currentQuestionId.value]));
+    const currentQuestion = common_vendor.computed(() => questions.value[currentIndex.value] || {});
+    const currentQuestionType = common_vendor.computed(() => {
+      var _a;
+      return (_a = currentQuestion.value) == null ? void 0 : _a.type;
+    });
+    const currentFeedback = common_vendor.computed(
+      () => currentQuestionId.value ? feedback[currentQuestionId.value] || null : null
+    );
+    const currentSelected = common_vendor.computed(() => (currentQuestionId.value ? answers[currentQuestionId.value] : []) || []);
+    const hasAnswered = common_vendor.computed(() => Boolean(currentFeedback.value));
+    const answeredCount = common_vendor.computed(() => Object.keys(feedback).length);
+    const isFavorited = common_vendor.computed(() => Boolean(favoriteMap[currentQuestionId.value]));
+    const currentExplanation = common_vendor.computed(() => {
+      if (!currentFeedback.value)
+        return "";
+      return currentFeedback.value.explanation || "暂无解析";
+    });
     const renderType = (type) => {
-      const t = String(type || "").toLowerCase();
-      if (t.includes("multiple"))
+      const text = String(type || "");
+      const lower = text.toLowerCase();
+      if (lower.includes("multiple") || text.includes("多选"))
         return "多选";
-      if (t.includes("true") || t.includes("judge"))
+      if (lower.includes("true") || lower.includes("judge") || text.includes("判断") || text.includes("是非")) {
         return "判断";
-      if (t.includes("fill") || t.includes("short"))
+      }
+      if (lower.includes("fill") || lower.includes("short") || text.includes("填空") || text.includes("简答")) {
         return "简答";
+      }
       return "单选";
     };
-    const isMultiple = (type) => String(type || "").toLowerCase().includes("multiple");
-    const isShortAnswer = (type) => {
-      const t = String(type || "").toLowerCase();
-      return t.includes("fill") || t.includes("short");
+    const isMultiple = (type) => {
+      const text = String(type || "");
+      const lower = text.toLowerCase();
+      return lower.includes("multiple") || text.includes("多选");
     };
+    const isShortAnswer = (type) => {
+      const text = String(type || "");
+      const lower = text.toLowerCase();
+      return lower.includes("fill") || lower.includes("short") || text.includes("填空") || text.includes("简答");
+    };
+    const requiresManual = (type) => isMultiple(type) || isShortAnswer(type);
+    const isAutoSubmit = (type) => !requiresManual(type);
     const onSingleChange = (e) => {
       if (!currentQuestionId.value)
         return;
       answers[currentQuestionId.value] = [e.detail.value];
+      if (isAutoSubmit(currentQuestion.value.type)) {
+        maybeAutoSubmit();
+      }
     };
     const onMultipleChange = (e) => {
       if (!currentQuestionId.value)
@@ -86,7 +123,17 @@ const _sfc_main = {
         session.category = current || null;
         session.parent = parent || null;
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:200", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:258", err);
+      }
+    };
+    const initFavorites = async () => {
+      try {
+        const res = await api_favorites.fetchFavorites({ page: 1, size: 200 });
+        (res.records || []).forEach((item) => {
+          favoriteMap[item.questionId] = true;
+        });
+      } catch (err) {
+        common_vendor.index.__f__("warn", "at pages/questions/practice.vue:269", "fetch favorites failed, skip", err);
       }
     };
     const initAnswers = () => {
@@ -95,6 +142,23 @@ const _sfc_main = {
           answers[q.id] = [];
         }
       });
+    };
+    const backfillOptions = async (list) => {
+      const targets = (list || []).filter((q) => q && q.id && (!q.options || q.options.length === 0));
+      for (const q of targets) {
+        try {
+          const detail = await api_questions.fetchQuestionDetail(q.id);
+          if (detail && Array.isArray(detail.options) && detail.options.length) {
+            q.options = detail.options;
+            q.explanation = q.explanation || detail.explanation;
+            q.duration = q.duration || detail.duration;
+            q.score = q.score || detail.score;
+          }
+        } catch (err) {
+          common_vendor.index.__f__("warn", "at pages/questions/practice.vue:293", "backfill options failed", q.id, err);
+        }
+      }
+      initAnswers();
     };
     const loadRandom = async () => {
       const limit = params.count > 0 ? params.count : 5;
@@ -106,6 +170,7 @@ const _sfc_main = {
       pagination.size = list.length || limit;
       session.mode = "random";
       initAnswers();
+      await backfillOptions(list);
     };
     const loadSequencePage = async (pageToLoad = 1, append = false) => {
       if (pagination.loading)
@@ -124,18 +189,31 @@ const _sfc_main = {
         session.total = limitedTotal;
         pagination.size = res.size || size;
         pagination.page = pageToLoad;
-        questions.value = append ? [...questions.value, ...list] : list;
+        const merged = append ? [...questions.value, ...list] : list;
+        questions.value = merged;
         initAnswers();
+        await backfillOptions(list);
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:246", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:336", err);
         common_vendor.index.showToast({ title: "加载题目失败", icon: "none" });
       } finally {
         pagination.loading = false;
       }
     };
     const loadSession = async (options) => {
+      var _a;
       loading.value = true;
       try {
+        questions.value = [];
+        Object.keys(answers).forEach((key) => delete answers[key]);
+        Object.keys(feedback).forEach((key) => delete feedback[key]);
+        stats.correct = 0;
+        stats.wrong = 0;
+        resultShown.value = false;
+        pagination.page = 1;
+        pagination.size = 10;
+        pagination.total = 0;
+        pagination.loading = false;
         params.categoryId = (options == null ? void 0 : options.categoryId) ? Number(options.categoryId) || options.categoryId : "";
         if (!params.categoryId) {
           common_vendor.index.showToast({ title: "缺少分类参数", icon: "none" });
@@ -143,15 +221,14 @@ const _sfc_main = {
         }
         params.count = (options == null ? void 0 : options.count) ? Number(options.count) : 0;
         params.mode = (options == null ? void 0 : options.mode) === "random" ? "random" : "order";
-        await loadCategoryInfo(params.categoryId);
-        if (params.mode === "random") {
-          await loadRandom();
-        } else {
-          await loadSequencePage(1, false);
-        }
+        const favoritesPromise = initFavorites();
+        const categoryPromise = loadCategoryInfo(params.categoryId);
+        const questionPromise = params.mode === "random" ? loadRandom() : loadSequencePage(1, false);
+        await Promise.all([categoryPromise, questionPromise]);
+        (_a = favoritesPromise == null ? void 0 : favoritesPromise.catch) == null ? void 0 : _a.call(favoritesPromise, (err) => common_vendor.index.__f__("warn", "at pages/questions/practice.vue:368", "favorites init failed", err));
         currentIndex.value = 0;
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:271", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:371", err);
         common_vendor.index.showToast({ title: err.message || "加载失败", icon: "none" });
       } finally {
         loading.value = false;
@@ -165,6 +242,20 @@ const _sfc_main = {
       if (pagination.loading)
         return;
       await loadSequencePage(pagination.page + 1, true);
+    };
+    const updateStats = (isCorrect) => {
+      if (isCorrect) {
+        stats.correct += 1;
+      } else {
+        stats.wrong += 1;
+      }
+    };
+    const maybeShowResult = () => {
+      if (resultShown.value)
+        return;
+      if (answeredCount.value >= session.total && session.total > 0) {
+        openResultSummary();
+      }
     };
     const submitAnswer = async () => {
       const question = questions.value[currentIndex.value];
@@ -185,23 +276,31 @@ const _sfc_main = {
           timeSpent: question.duration || 20
         });
         feedback[question.id] = res;
+        updateStats(res.isCorrect);
         if (res.isCorrect) {
           common_vendor.index.showToast({ title: "正确，自动跳转", icon: "success" });
           setTimeout(() => goNext(true), 500);
         } else {
           common_vendor.index.showToast({ title: "查看解析，左滑下一题", icon: "none" });
         }
+        maybeShowResult();
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:309", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:426", err);
         common_vendor.index.showToast({ title: "提交失败", icon: "none" });
       } finally {
         submitting.value = false;
       }
     };
+    const maybeAutoSubmit = () => {
+      if (submitting.value || hasAnswered.value)
+        return;
+      submitAnswer();
+    };
     const goNext = (auto = false) => {
       var _a, _b;
       if (currentIndex.value >= session.total - 1) {
         common_vendor.index.showToast({ title: "练习完成", icon: "success" });
+        maybeShowResult();
         return;
       }
       currentIndex.value += 1;
@@ -218,6 +317,40 @@ const _sfc_main = {
       if (currentIndex.value >= questions.value.length - 2) {
         maybeLoadMore();
       }
+    };
+    const toggleFavorite = async () => {
+      const qid = currentQuestionId.value;
+      if (!qid)
+        return;
+      try {
+        if (favoriteMap[qid]) {
+          await api_favorites.removeFavorite(qid);
+          favoriteMap[qid] = false;
+          common_vendor.index.showToast({ title: "已取消收藏", icon: "none" });
+        } else {
+          await api_favorites.addFavorite(qid);
+          favoriteMap[qid] = true;
+          common_vendor.index.showToast({ title: "已收藏", icon: "success" });
+        }
+      } catch (err) {
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:475", err);
+        common_vendor.index.showToast({ title: err.message || "操作失败", icon: "none" });
+      }
+    };
+    const openResultSummary = () => {
+      resultShown.value = true;
+      const unanswered = Math.max(session.total - answeredCount.value, 0);
+      const correctRate = session.total > 0 ? Math.round(stats.correct / session.total * 1e3) / 10 : 0;
+      common_vendor.index.showModal({
+        title: "练习结果",
+        content: `共 ${session.total} 题
+已答：${answeredCount.value}
+正确：${stats.correct}
+错误：${stats.wrong}
+未答：${unanswered}
+正确率：${correctRate}%`,
+        showCancel: false
+      });
     };
     common_vendor.watch(currentQuestionId, (id) => {
       if (id && !answers[id]) {
@@ -278,35 +411,62 @@ const _sfc_main = {
             }),
             k: common_vendor.o(onSingleChange, item.id)
           }, {
-            g: isShortAnswer(item.type),
-            l: common_vendor.o(submitAnswer, item.id)
-          }, ((_a2 = feedback[currentQuestionId.value]) == null ? void 0 : _a2.isCorrect) ? {} : {}, feedback[currentQuestionId.value] ? common_vendor.e({
-            m: "1e7fffe1-2-" + i0,
-            n: common_vendor.p({
-              type: feedback[currentQuestionId.value].isCorrect ? "checkmarkempty" : "closeempty",
-              color: feedback[currentQuestionId.value].isCorrect ? "#10b981" : "#ef4444",
+            g: isShortAnswer(item.type)
+          }, requiresManual(currentQuestionType.value) ? {
+            l: common_vendor.t(hasAnswered.value ? "已提交" : "提交答案"),
+            m: submitting.value,
+            n: !currentSelected.value.length || hasAnswered.value,
+            o: common_vendor.o(submitAnswer, item.id)
+          } : {
+            p: "1e7fffe1-2-" + i0,
+            q: common_vendor.p({
+              type: "gear",
+              size: "18",
+              color: "#6b7280"
+            })
+          }, ((_a2 = currentFeedback.value) == null ? void 0 : _a2.isCorrect) ? {} : {}, currentFeedback.value ? common_vendor.e({
+            r: "1e7fffe1-3-" + i0,
+            s: common_vendor.p({
+              type: currentFeedback.value.isCorrect ? "checkmarkempty" : "closeempty",
+              color: currentFeedback.value.isCorrect ? "#10b981" : "#ef4444",
               size: "22"
             }),
-            o: common_vendor.t(feedback[currentQuestionId.value].isCorrect ? "回答正确" : "回答错误"),
-            p: common_vendor.t(feedback[currentQuestionId.value].correctAnswer.join(", ")),
-            q: common_vendor.t(feedback[currentQuestionId.value].explanation),
-            r: !feedback[currentQuestionId.value].isCorrect
-          }, !feedback[currentQuestionId.value].isCorrect ? {} : {}, {
-            s: common_vendor.n(feedback[currentQuestionId.value].isCorrect ? "success" : "danger")
+            t: common_vendor.t(currentFeedback.value.isCorrect ? "回答正确" : "回答错误"),
+            v: common_vendor.t((currentFeedback.value.correctAnswer || []).join(", ") || "--"),
+            w: common_vendor.t(currentExplanation.value),
+            x: !currentFeedback.value.isCorrect
+          }, !currentFeedback.value.isCorrect ? {} : {}, {
+            y: common_vendor.n(currentFeedback.value.isCorrect ? "success" : "danger")
           }) : {}, {
-            t: item.id
+            z: item.id
           });
         }),
-        j: common_vendor.t(hasAnswered.value ? "已提交" : "提交答案"),
-        k: submitting.value,
-        l: !currentSelected.value.length || hasAnswered.value,
-        m: (_c = feedback[currentQuestionId.value]) == null ? void 0 : _c.isCorrect,
-        n: feedback[currentQuestionId.value],
-        o: currentIndex.value,
-        p: common_vendor.o(onSwipe)
+        j: requiresManual(currentQuestionType.value),
+        k: (_c = currentFeedback.value) == null ? void 0 : _c.isCorrect,
+        l: currentFeedback.value,
+        m: currentIndex.value,
+        n: common_vendor.o(onSwipe)
       }, {
-        h: !session.total
-      });
+        h: !session.total,
+        o: session.total
+      }, session.total ? {
+        p: common_vendor.o(toggleFavorite),
+        q: common_vendor.p({
+          checked: isFavorited.value,
+          bgColor: "#f9fafb",
+          bgColorChecked: "#1d4ed8",
+          fgColor: "#1f2937",
+          fgColorChecked: "#fff",
+          contentText: {
+            contentDefault: "收藏",
+            contentFav: "已收藏"
+          }
+        }),
+        r: common_vendor.t(stats.correct),
+        s: common_vendor.t(stats.wrong),
+        t: answeredCount.value < session.total,
+        v: common_vendor.o(openResultSummary)
+      } : {});
     };
   }
 };

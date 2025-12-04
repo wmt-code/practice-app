@@ -71,6 +71,51 @@ import { fetchCategoryTree } from '@/api/categories.js';
 const categoryTree = ref([]);
 const selectedParent = ref('');
 const keyword = ref('');
+const navigating = ref(false);
+
+const navigateWithFallback = (url, { timeout = 1500 } = {}) =>
+  new Promise((resolve, reject) => {
+    let settled = false;
+    const clear = () => {
+      settled = true;
+      if (timer) clearTimeout(timer);
+    };
+    const timer = setTimeout(() => {
+      if (settled) return;
+      uni.redirectTo({
+        url,
+        success: () => {
+          clear();
+          resolve();
+        },
+        fail: (err) => {
+          clear();
+          reject(err);
+        },
+      });
+    }, timeout);
+    uni.navigateTo({
+      url,
+      success: () => {
+        clear();
+        resolve();
+      },
+      fail: (err) => {
+        if (settled) return;
+        uni.redirectTo({
+          url,
+          success: () => {
+            clear();
+            resolve();
+          },
+          fail: (redirectErr) => {
+            clear();
+            reject(redirectErr || err);
+          },
+        });
+      },
+    });
+  });
 
 const childrenOfParent = computed(() => {
   const parent = categoryTree.value.find((p) => String(p.id) === String(selectedParent.value));
@@ -109,10 +154,18 @@ const clearSearch = () => {
   keyword.value = '';
 };
 
-const goCategory = (item) => {
-  uni.navigateTo({
-    url: `/pages/questions/category?categoryId=${item.id}`,
-  });
+const goCategory = async (item) => {
+  if (navigating.value) return;
+  navigating.value = true;
+  const url = `/pages/questions/category?categoryId=${item.id}`;
+  try {
+    await navigateWithFallback(url, { timeout: 1200 });
+  } catch (err) {
+    console.error('navigate to category failed', err);
+    uni.showToast({ title: '打开分类失败，请重试', icon: 'none' });
+  } finally {
+    navigating.value = false;
+  }
 };
 
 const renderDesc = (item) => {

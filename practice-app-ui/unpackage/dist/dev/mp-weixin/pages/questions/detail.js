@@ -26,19 +26,27 @@ const _sfc_main = {
     const feedback = common_vendor.ref(null);
     const submitting = common_vendor.ref(false);
     const renderType = (type) => {
-      const t = String(type || "").toLowerCase();
-      if (t.includes("multiple"))
+      const text = String(type || "");
+      const lower = text.toLowerCase();
+      if (lower.includes("multiple") || text.includes("多选"))
         return "多选";
-      if (t.includes("true") || t.includes("judge"))
+      if (lower.includes("true") || lower.includes("judge") || text.includes("判断") || text.includes("是非")) {
         return "判断";
-      if (t.includes("fill") || t.includes("short"))
+      }
+      if (lower.includes("fill") || lower.includes("short") || text.includes("填空") || text.includes("简答")) {
         return "简答";
+      }
       return "单选";
     };
-    const isMultiple = (type) => String(type || "").toLowerCase().includes("multiple");
+    const isMultiple = (type) => {
+      const text = String(type || "");
+      const lower = text.toLowerCase();
+      return lower.includes("multiple") || text.includes("多选");
+    };
     const isShortAnswer = (type) => {
-      const t = String(type || "").toLowerCase();
-      return t.includes("fill") || t.includes("short");
+      const text = String(type || "");
+      const lower = text.toLowerCase();
+      return lower.includes("fill") || lower.includes("short") || text.includes("填空") || text.includes("简答");
     };
     const onSingleChange = (e) => {
       selected.value = [e.detail.value];
@@ -69,7 +77,7 @@ const _sfc_main = {
         selected.value = [];
         feedback.value = null;
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/detail.vue:152", err);
+        common_vendor.index.__f__("error", "at pages/questions/detail.vue:162", err);
         common_vendor.index.showToast({ title: "加载失败", icon: "none" });
       }
     };
@@ -94,7 +102,7 @@ const _sfc_main = {
           icon: res.isCorrect ? "success" : "none"
         });
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/detail.vue:177", err);
+        common_vendor.index.__f__("error", "at pages/questions/detail.vue:187", err);
         common_vendor.index.showToast({ title: "提交失败", icon: "none" });
       } finally {
         submitting.value = false;

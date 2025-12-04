@@ -41,6 +41,13 @@
   box-shadow: 0 10rpx 28rpx rgba(31, 56, 88, 0.08);
   margin-top: 16rpx;
 }
+.loading.data-v-099975ac {
+  margin-top: 20rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 16rpx;
+  box-shadow: 0 10rpx 28rpx rgba(31, 56, 88, 0.08);
+}
 .section-header.data-v-099975ac {
   display: flex;
   justify-content: space-between;

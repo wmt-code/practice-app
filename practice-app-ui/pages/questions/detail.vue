@@ -104,17 +104,27 @@ const feedback = ref(null);
 const submitting = ref(false);
 
 const renderType = (type) => {
-  const t = String(type || '').toLowerCase();
-  if (t.includes('multiple')) return '多选';
-  if (t.includes('true') || t.includes('judge')) return '判断';
-  if (t.includes('fill') || t.includes('short')) return '简答';
+  const text = String(type || '');
+  const lower = text.toLowerCase();
+  if (lower.includes('multiple') || text.includes('多选')) return '多选';
+  if (lower.includes('true') || lower.includes('judge') || text.includes('判断') || text.includes('是非')) {
+    return '判断';
+  }
+  if (lower.includes('fill') || lower.includes('short') || text.includes('填空') || text.includes('简答')) {
+    return '简答';
+  }
   return '单选';
 };
 
-const isMultiple = (type) => String(type || '').toLowerCase().includes('multiple');
+const isMultiple = (type) => {
+  const text = String(type || '');
+  const lower = text.toLowerCase();
+  return lower.includes('multiple') || text.includes('多选');
+};
 const isShortAnswer = (type) => {
-  const t = String(type || '').toLowerCase();
-  return t.includes('fill') || t.includes('short');
+  const text = String(type || '');
+  const lower = text.toLowerCase();
+  return lower.includes('fill') || lower.includes('short') || text.includes('填空') || text.includes('简答');
 };
 
 const onSingleChange = (e) => {

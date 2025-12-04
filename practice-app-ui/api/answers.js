@@ -23,7 +23,7 @@ export async function submitAnswer({ questionId, chosen = [], timeSpent = 0 }) {
     userAnswer: res?.userAnswer || [],
     score: res?.score || 0,
     timeSpent: res?.timeSpent || 0,
-    explanation: res?.explanation,
+    explanation: res?.explanation || res?.analysis || '暂无解析',
     answeredAt: res?.answeredAt,
     difficulty: res?.difficulty,
   };

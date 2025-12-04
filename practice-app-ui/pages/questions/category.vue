@@ -14,7 +14,11 @@
       </view>
     </view>
 
-    <view class="section-card">
+    <view v-if="loading" class="loading">
+      <uni-load-more status="loading" iconType="circle" />
+    </view>
+
+    <view v-else class="section-card">
       <view class="section-header">
         <text class="section-title">练习模式</text>
         <text class="muted">顺序刷题或随机抽题</text>
@@ -27,7 +31,16 @@
           </view>
           <text class="desc">按题目顺序从头到尾刷题</text>
           <view class="meta">共 {{ summary.total }} 题 · 已做 {{ summary.answered }}</view>
-          <button type="primary" size="mini" class="ghost" @tap.stop="startOrder">开始</button>
+          <button
+            type="primary"
+            size="mini"
+            class="ghost"
+            :disabled="!summary.total || loading || navigating"
+            :loading="loading || navigating"
+            @tap.stop="startOrder"
+          >
+            开始
+          </button>
         </view>
         <view class="practice-card random">
           <view class="card-top">
@@ -46,7 +59,16 @@
             />
           </view>
           <view class="meta">最多 {{ summary.total }} 题</view>
-          <button type="default" size="mini" class="primary" @tap.stop="startRandom">开始随机</button>
+          <button
+            type="default"
+            size="mini"
+            class="primary"
+            :disabled="!summary.total || loading || navigating"
+            :loading="loading || navigating"
+            @tap.stop="startRandom"
+          >
+            开始随机
+          </button>
         </view>
       </view>
     </view>
@@ -71,6 +93,50 @@ import { fetchCategoryTree, flattenCategoryTree } from '@/api/categories.js';
 import { fetchPracticeSequence } from '@/api/questions.js';
 import { fetchProgressSummary } from '@/api/progress';
 
+const navigateWithFallback = (url, { timeout = 1500 } = {}) =>
+  new Promise((resolve, reject) => {
+    let settled = false;
+    const clear = () => {
+      settled = true;
+      if (timer) clearTimeout(timer);
+    };
+    const timer = setTimeout(() => {
+      if (settled) return;
+      uni.redirectTo({
+        url,
+        success: () => {
+          clear();
+          resolve();
+        },
+        fail: (err) => {
+          clear();
+          reject(err);
+        },
+      });
+    }, timeout);
+    uni.navigateTo({
+      url,
+      success: () => {
+        clear();
+        resolve();
+      },
+      fail: (err) => {
+        if (settled) return;
+        uni.redirectTo({
+          url,
+          success: () => {
+            clear();
+            resolve();
+          },
+          fail: (redirectErr) => {
+            clear();
+            reject(redirectErr || err);
+          },
+        });
+      },
+    });
+  });
+
 const category = ref(null);
 const parentName = ref('');
 const summary = ref({
@@ -78,16 +144,15 @@ const summary = ref({
   answered: 0,
 });
 const customCount = ref(5);
+const loading = ref(false);
+const navigating = ref(false);
 
 const minCount = computed(() => 1);
 
 const loadData = async (categoryId) => {
+  loading.value = true;
   try {
-    const [tree, practicePage, progressData] = await Promise.all([
-      fetchCategoryTree(),
-      fetchPracticeSequence({ categoryId, page: 1, size: 1 }),
-      fetchProgressSummary(),
-    ]);
+    const tree = await fetchCategoryTree();
     const flat = flattenCategoryTree(tree);
     const current = flat.find((c) => `${c.id}` === `${categoryId}`);
     const parent = flat.find((c) => c.id === current?.parentId);
@@ -97,35 +162,86 @@ const loadData = async (categoryId) => {
     }
     category.value = current;
     parentName.value = parent?.name || '题库';
-    const progressItem = Array.isArray(progressData?.categories)
-      ? progressData.categories.find((c) => `${c.id}` === `${categoryId}`)
-      : null;
-    const total = practicePage.total || current.questionCount || 0;
+    const baseTotal = current.questionCount || 0;
     summary.value = {
-      total,
-      answered: progressItem?.answered || progressItem?.completedQuestions || 0,
+      total: baseTotal,
+      answered: 0,
     };
-    const fallbackCount = total || 5;
-    customCount.value = Math.min(total || fallbackCount, customCount.value || fallbackCount);
+    const fallbackCount = baseTotal || 5;
+    customCount.value = Math.min(baseTotal || fallbackCount, customCount.value || fallbackCount);
+    loading.value = false; // 先让页面可用，后续请求再补充
+
+    // 异步补充真实题量
+    fetchPracticeSequence({ categoryId, page: 1, size: 1 })
+      .then((practicePage) => {
+        const total = practicePage.total || baseTotal;
+        summary.value = {
+          ...summary.value,
+          total,
+        };
+        customCount.value = Math.min(total || fallbackCount, customCount.value || fallbackCount);
+      })
+      .catch((err) => {
+        console.warn('practice sequence fallback to cached count', err);
+      });
+
+    // 进度统计可能需要登录，失败不影响进入练习
+    fetchProgressSummary()
+      .then((progressData) => {
+        const progressItem = Array.isArray(progressData?.categories)
+          ? progressData.categories.find((c) => `${c.id}` === `${categoryId}`)
+          : null;
+        if (progressItem) {
+          summary.value = {
+            ...summary.value,
+            answered: progressItem.answered || progressItem.completedQuestions || 0,
+          };
+        }
+      })
+      .catch((err) => {
+        console.warn('progress summary skipped', err);
+      });
   } catch (err) {
     console.error(err);
     uni.showToast({ title: '加载失败', icon: 'none' });
+    loading.value = false;
   }
 };
 
-const startPractice = (mode) => {
-  if (!category.value) return;
+const normalizeRandomCount = () => {
+  const total = summary.value.total || 0;
+  if (!total) return 0;
+  const raw = Number(customCount.value) || 0;
+  const clamped = Math.min(Math.max(raw, minCount.value), total);
+  return clamped;
+};
+
+const startPractice = async (mode) => {
+  if (loading.value) {
+    uni.showToast({ title: '数据加载中，请稍后', icon: 'none' });
+    return;
+  }
+  if (!category.value) {
+    uni.showToast({ title: '分类信息未加载', icon: 'none' });
+    return;
+  }
   if (!summary.value.total) {
     uni.showToast({ title: '该分类暂无题目', icon: 'none' });
     return;
   }
-  const count =
-    mode === 'random'
-      ? Math.min(Math.max(customCount.value || 0, minCount.value), summary.value.total || 0)
-      : summary.value.total;
-  uni.navigateTo({
-    url: `/pages/questions/practice?categoryId=${category.value.id}&mode=${mode}&count=${count}`,
-  });
+  const isRandom = mode === 'random';
+  const count = isRandom ? normalizeRandomCount() : 0; // 顺序练习不限制条数，后端按默认分页
+  if (navigating.value) return;
+  navigating.value = true;
+  const url = `/pages/questions/practice?categoryId=${category.value.id}&mode=${mode}&count=${count}`;
+  try {
+    await navigateWithFallback(url, { timeout: 1200 });
+  } catch (err) {
+    console.error('navigate to practice failed', err);
+    uni.showToast({ title: '打开练习页失败，请重试', icon: 'none' });
+  } finally {
+    navigating.value = false;
+  }
 };
 
 const startOrder = () => startPractice('order');
@@ -195,6 +311,14 @@ onPullDownRefresh(async () => {
   padding: 18rpx;
   box-shadow: 0 10rpx 28rpx rgba(31, 56, 88, 0.08);
   margin-top: 16rpx;
+}
+
+.loading {
+  margin-top: 20rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 16rpx;
+  box-shadow: 0 10rpx 28rpx rgba(31, 56, 88, 0.08);
 }
 
 .section-header {

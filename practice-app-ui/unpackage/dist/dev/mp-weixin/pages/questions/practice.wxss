@@ -151,3 +151,52 @@
   text-align: center;
   color: #6b7280;
 }
+.auto-tip.data-v-1e7fffe1 {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 8rpx 0;
+}
+.floating-actions.data-v-1e7fffe1 {
+  position: fixed;
+  right: 20rpx;
+  bottom: 30rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10rpx;
+  z-index: 10;
+}
+.fav-btn.data-v-1e7fffe1 {
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.1);
+  border-radius: 16rpx;
+}
+.stat-badges.data-v-1e7fffe1 {
+  display: flex;
+  gap: 8rpx;
+}
+.stat.data-v-1e7fffe1 {
+  padding: 8rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #fff;
+  box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.1);
+}
+.stat.correct.data-v-1e7fffe1 {
+  background: #10b981;
+}
+.stat.wrong.data-v-1e7fffe1 {
+  background: #ef4444;
+}
+.result-btn.data-v-1e7fffe1 {
+  background: #111827;
+  color: #fff;
+  border: none;
+  padding: 10rpx 16rpx;
+  border-radius: 10rpx;
+  font-size: 24rpx;
+}
+.result-btn.data-v-1e7fffe1:disabled {
+  background: #9ca3af;
+  color: #f3f4f6;
+}

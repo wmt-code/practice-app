@@ -19,6 +19,52 @@ const _sfc_main = {
     const categoryTree = common_vendor.ref([]);
     const selectedParent = common_vendor.ref("");
     const keyword = common_vendor.ref("");
+    const navigating = common_vendor.ref(false);
+    const navigateWithFallback = (url, { timeout = 1500 } = {}) => new Promise((resolve, reject) => {
+      let settled = false;
+      const clear = () => {
+        settled = true;
+        if (timer)
+          clearTimeout(timer);
+      };
+      const timer = setTimeout(() => {
+        if (settled)
+          return;
+        common_vendor.index.redirectTo({
+          url,
+          success: () => {
+            clear();
+            resolve();
+          },
+          fail: (err) => {
+            clear();
+            reject(err);
+          }
+        });
+      }, timeout);
+      common_vendor.index.navigateTo({
+        url,
+        success: () => {
+          clear();
+          resolve();
+        },
+        fail: (err) => {
+          if (settled)
+            return;
+          common_vendor.index.redirectTo({
+            url,
+            success: () => {
+              clear();
+              resolve();
+            },
+            fail: (redirectErr) => {
+              clear();
+              reject(redirectErr || err);
+            }
+          });
+        }
+      });
+    });
     const childrenOfParent = common_vendor.computed(() => {
       const parent = categoryTree.value.find((p) => String(p.id) === String(selectedParent.value));
       return parent ? parent.children : [];
@@ -50,10 +96,19 @@ const _sfc_main = {
     const clearSearch = () => {
       keyword.value = "";
     };
-    const goCategory = (item) => {
-      common_vendor.index.navigateTo({
-        url: `/pages/questions/category?categoryId=${item.id}`
-      });
+    const goCategory = async (item) => {
+      if (navigating.value)
+        return;
+      navigating.value = true;
+      const url = `/pages/questions/category?categoryId=${item.id}`;
+      try {
+        await navigateWithFallback(url, { timeout: 1200 });
+      } catch (err) {
+        common_vendor.index.__f__("error", "at pages/questions/index.vue:164", "navigate to category failed", err);
+        common_vendor.index.showToast({ title: "打开分类失败，请重试", icon: "none" });
+      } finally {
+        navigating.value = false;
+      }
     };
     const renderDesc = (item) => {
       if (item.description)

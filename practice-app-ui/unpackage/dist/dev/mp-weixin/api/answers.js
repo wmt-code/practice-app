@@ -22,7 +22,7 @@ async function submitAnswer({ questionId, chosen = [], timeSpent = 0 }) {
     userAnswer: (res == null ? void 0 : res.userAnswer) || [],
     score: (res == null ? void 0 : res.score) || 0,
     timeSpent: (res == null ? void 0 : res.timeSpent) || 0,
-    explanation: res == null ? void 0 : res.explanation,
+    explanation: (res == null ? void 0 : res.explanation) || (res == null ? void 0 : res.analysis) || "暂无解析",
     answeredAt: res == null ? void 0 : res.answeredAt,
     difficulty: res == null ? void 0 : res.difficulty
   };

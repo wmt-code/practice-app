@@ -80,6 +80,7 @@
 
           <view class="action-row">
             <button
+              v-if="requiresManual(currentQuestionType)"
               type="primary"
               class="submit"
               :loading="submitting"
@@ -88,48 +89,73 @@
             >
               {{ hasAnswered ? '已提交' : '提交答案' }}
             </button>
-            <text v-if="feedback[currentQuestionId]?.isCorrect" class="muted">回答正确，自动跳转下一题</text>
+            <view v-else class="auto-tip">
+              <uni-icons type="gear" size="18" color="#6b7280" />
+              <text class="muted">单选/判断选中即判题</text>
+            </view>
+            <text v-if="currentFeedback?.isCorrect" class="muted">回答正确，自动跳转下一题</text>
           </view>
 
           <view
-            v-if="feedback[currentQuestionId]"
+            v-if="currentFeedback"
             class="analysis"
-            :class="feedback[currentQuestionId].isCorrect ? 'success' : 'danger'"
+            :class="currentFeedback.isCorrect ? 'success' : 'danger'"
           >
             <view class="result">
               <uni-icons
-                :type="feedback[currentQuestionId].isCorrect ? 'checkmarkempty' : 'closeempty'"
-                :color="feedback[currentQuestionId].isCorrect ? '#10b981' : '#ef4444'"
+                :type="currentFeedback.isCorrect ? 'checkmarkempty' : 'closeempty'"
+                :color="currentFeedback.isCorrect ? '#10b981' : '#ef4444'"
                 size="22"
               />
               <text class="result-text">
-                {{ feedback[currentQuestionId].isCorrect ? '回答正确' : '回答错误' }}
+                {{ currentFeedback.isCorrect ? '回答正确' : '回答错误' }}
               </text>
             </view>
             <view class="answer">
               <text class="muted">正确答案：</text>
-              <text class="answer-text">{{ feedback[currentQuestionId].correctAnswer.join(', ') }}</text>
+              <text class="answer-text">{{ (currentFeedback.correctAnswer || []).join(', ') || '--' }}</text>
             </view>
             <view class="explain">
               <text class="muted">解析：</text>
-              <text>{{ feedback[currentQuestionId].explanation }}</text>
+              <text>{{ currentExplanation }}</text>
             </view>
-            <view v-if="!feedback[currentQuestionId].isCorrect" class="swipe-tip">
+            <view v-if="!currentFeedback.isCorrect" class="swipe-tip">
               左滑切换下一题
             </view>
           </view>
         </view>
       </swiper-item>
     </swiper>
+
+    <view v-if="session.total" class="floating-actions">
+      <uni-fav
+        class="fav-btn"
+        :checked="isFavorited"
+        bgColor="#f9fafb"
+        bgColorChecked="#1d4ed8"
+        fgColor="#1f2937"
+        fgColorChecked="#fff"
+        :contentText="{contentDefault: '收藏', contentFav: '已收藏'}"
+        @click="toggleFavorite"
+      />
+      <view class="stat-badges">
+        <view class="stat correct">对 {{ stats.correct }}</view>
+        <view class="stat wrong">错 {{ stats.wrong }}</view>
+      </view>
+      <button class="result-btn" size="mini" type="default" :disabled="answeredCount < session.total" @tap="openResultSummary">
+        查看结果
+      </button>
+    </view>
   </view>
 </template>
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import { fetchPracticeRandom, fetchPracticeSequence } from '@/api/questions.js';
+import { fetchPracticeRandom, fetchPracticeSequence, fetchQuestionDetail } from '@/api/questions.js';
 import { submitAnswer as submitAnswerApi } from '@/api/answers.js';
 import { fetchCategoryTree, flattenCategoryTree } from '@/api/categories.js';
+import { addFavorite, removeFavorite, fetchFavorites } from '@/api/favorites.js';
 
 const questions = ref([]);
 const session = reactive({
@@ -154,28 +180,60 @@ const answers = reactive({});
 const feedback = reactive({});
 const submitting = ref(false);
 const loading = ref(false);
+const favoriteMap = reactive({});
+const stats = reactive({
+  correct: 0,
+  wrong: 0,
+});
+const resultShown = ref(false);
 
 const currentQuestionId = computed(() => questions.value[currentIndex.value]?.id);
-const currentSelected = computed(() => answers[currentQuestionId.value] || []);
-const hasAnswered = computed(() => Boolean(feedback[currentQuestionId.value]));
+const currentQuestion = computed(() => questions.value[currentIndex.value] || {});
+const currentQuestionType = computed(() => currentQuestion.value?.type);
+const currentFeedback = computed(() =>
+  currentQuestionId.value ? feedback[currentQuestionId.value] || null : null,
+);
+const currentSelected = computed(() => (currentQuestionId.value ? answers[currentQuestionId.value] : []) || []);
+const hasAnswered = computed(() => Boolean(currentFeedback.value));
+const answeredCount = computed(() => Object.keys(feedback).length);
+const isFavorited = computed(() => Boolean(favoriteMap[currentQuestionId.value]));
+const currentExplanation = computed(() => {
+  if (!currentFeedback.value) return '';
+  return currentFeedback.value.explanation || '暂无解析';
+});
 
 const renderType = (type) => {
-  const t = String(type || '').toLowerCase();
-  if (t.includes('multiple')) return '多选';
-  if (t.includes('true') || t.includes('judge')) return '判断';
-  if (t.includes('fill') || t.includes('short')) return '简答';
+  const text = String(type || '');
+  const lower = text.toLowerCase();
+  if (lower.includes('multiple') || text.includes('多选')) return '多选';
+  if (lower.includes('true') || lower.includes('judge') || text.includes('判断') || text.includes('是非')) {
+    return '判断';
+  }
+  if (lower.includes('fill') || lower.includes('short') || text.includes('填空') || text.includes('简答')) {
+    return '简答';
+  }
   return '单选';
 };
 
-const isMultiple = (type) => String(type || '').toLowerCase().includes('multiple');
-const isShortAnswer = (type) => {
-  const t = String(type || '').toLowerCase();
-  return t.includes('fill') || t.includes('short');
+const isMultiple = (type) => {
+  const text = String(type || '');
+  const lower = text.toLowerCase();
+  return lower.includes('multiple') || text.includes('多选');
 };
+const isShortAnswer = (type) => {
+  const text = String(type || '');
+  const lower = text.toLowerCase();
+  return lower.includes('fill') || lower.includes('short') || text.includes('填空') || text.includes('简答');
+};
+const requiresManual = (type) => isMultiple(type) || isShortAnswer(type);
+const isAutoSubmit = (type) => !requiresManual(type);
 
 const onSingleChange = (e) => {
   if (!currentQuestionId.value) return;
   answers[currentQuestionId.value] = [e.detail.value];
+  if (isAutoSubmit(currentQuestion.value.type)) {
+    maybeAutoSubmit();
+  }
 };
 
 const onMultipleChange = (e) => {
@@ -201,12 +259,41 @@ const loadCategoryInfo = async (categoryId) => {
   }
 };
 
+const initFavorites = async () => {
+  try {
+    const res = await fetchFavorites({ page: 1, size: 200 });
+    (res.records || []).forEach((item) => {
+      favoriteMap[item.questionId] = true;
+    });
+  } catch (err) {
+    console.warn('fetch favorites failed, skip', err);
+  }
+};
+
 const initAnswers = () => {
   questions.value.forEach((q) => {
     if (!answers[q.id]) {
       answers[q.id] = [];
     }
   });
+};
+
+const backfillOptions = async (list) => {
+  const targets = (list || []).filter((q) => q && q.id && (!q.options || q.options.length === 0));
+  for (const q of targets) {
+    try {
+      const detail = await fetchQuestionDetail(q.id);
+      if (detail && Array.isArray(detail.options) && detail.options.length) {
+        q.options = detail.options;
+        q.explanation = q.explanation || detail.explanation;
+        q.duration = q.duration || detail.duration;
+        q.score = q.score || detail.score;
+      }
+    } catch (err) {
+      console.warn('backfill options failed', q.id, err);
+    }
+  }
+  initAnswers();
 };
 
 const loadRandom = async () => {
@@ -219,6 +306,7 @@ const loadRandom = async () => {
   pagination.size = list.length || limit;
   session.mode = 'random';
   initAnswers();
+  await backfillOptions(list);
 };
 
 const loadSequencePage = async (pageToLoad = 1, append = false) => {
@@ -240,8 +328,10 @@ const loadSequencePage = async (pageToLoad = 1, append = false) => {
     session.total = limitedTotal;
     pagination.size = res.size || size;
     pagination.page = pageToLoad;
-    questions.value = append ? [...questions.value, ...list] : list;
+    const merged = append ? [...questions.value, ...list] : list;
+    questions.value = merged;
     initAnswers();
+    await backfillOptions(list);
   } catch (err) {
     console.error(err);
     uni.showToast({ title: '加载题目失败', icon: 'none' });
@@ -253,6 +343,16 @@ const loadSequencePage = async (pageToLoad = 1, append = false) => {
 const loadSession = async (options) => {
   loading.value = true;
   try {
+    questions.value = [];
+    Object.keys(answers).forEach((key) => delete answers[key]);
+    Object.keys(feedback).forEach((key) => delete feedback[key]);
+    stats.correct = 0;
+    stats.wrong = 0;
+    resultShown.value = false;
+    pagination.page = 1;
+    pagination.size = 10;
+    pagination.total = 0;
+    pagination.loading = false;
     params.categoryId = options?.categoryId ? Number(options.categoryId) || options.categoryId : '';
     if (!params.categoryId) {
       uni.showToast({ title: '缺少分类参数', icon: 'none' });
@@ -260,12 +360,12 @@ const loadSession = async (options) => {
     }
     params.count = options?.count ? Number(options.count) : 0;
     params.mode = options?.mode === 'random' ? 'random' : 'order';
-    await loadCategoryInfo(params.categoryId);
-    if (params.mode === 'random') {
-      await loadRandom();
-    } else {
-      await loadSequencePage(1, false);
-    }
+    const favoritesPromise = initFavorites();
+    const categoryPromise = loadCategoryInfo(params.categoryId);
+    const questionPromise =
+      params.mode === 'random' ? loadRandom() : loadSequencePage(1, false);
+    await Promise.all([categoryPromise, questionPromise]);
+    favoritesPromise?.catch?.((err) => console.warn('favorites init failed', err));
     currentIndex.value = 0;
   } catch (err) {
     console.error(err);
@@ -280,6 +380,21 @@ const maybeLoadMore = async () => {
   if (questions.value.length >= session.total) return;
   if (pagination.loading) return;
   await loadSequencePage(pagination.page + 1, true);
+};
+
+const updateStats = (isCorrect) => {
+  if (isCorrect) {
+    stats.correct += 1;
+  } else {
+    stats.wrong += 1;
+  }
+};
+
+const maybeShowResult = () => {
+  if (resultShown.value) return;
+  if (answeredCount.value >= session.total && session.total > 0) {
+    openResultSummary();
+  }
 };
 
 const submitAnswer = async () => {
@@ -299,12 +414,14 @@ const submitAnswer = async () => {
       timeSpent: question.duration || 20,
     });
     feedback[question.id] = res;
+    updateStats(res.isCorrect);
     if (res.isCorrect) {
       uni.showToast({ title: '正确，自动跳转', icon: 'success' });
       setTimeout(() => goNext(true), 500);
     } else {
       uni.showToast({ title: '查看解析，左滑下一题', icon: 'none' });
     }
+    maybeShowResult();
   } catch (err) {
     console.error(err);
     uni.showToast({ title: '提交失败', icon: 'none' });
@@ -313,9 +430,15 @@ const submitAnswer = async () => {
   }
 };
 
+const maybeAutoSubmit = () => {
+  if (submitting.value || hasAnswered.value) return;
+  submitAnswer();
+};
+
 const goNext = (auto = false) => {
   if (currentIndex.value >= session.total - 1) {
     uni.showToast({ title: '练习完成', icon: 'success' });
+    maybeShowResult();
     return;
   }
   currentIndex.value += 1;
@@ -333,6 +456,37 @@ const onSwipe = (e) => {
   if (currentIndex.value >= questions.value.length - 2) {
     maybeLoadMore();
   }
+};
+
+const toggleFavorite = async () => {
+  const qid = currentQuestionId.value;
+  if (!qid) return;
+  try {
+    if (favoriteMap[qid]) {
+      await removeFavorite(qid);
+      favoriteMap[qid] = false;
+      uni.showToast({ title: '已取消收藏', icon: 'none' });
+    } else {
+      await addFavorite(qid);
+      favoriteMap[qid] = true;
+      uni.showToast({ title: '已收藏', icon: 'success' });
+    }
+  } catch (err) {
+    console.error(err);
+    uni.showToast({ title: err.message || '操作失败', icon: 'none' });
+  }
+};
+
+const openResultSummary = () => {
+  resultShown.value = true;
+  const unanswered = Math.max(session.total - answeredCount.value, 0);
+  const correctRate =
+    session.total > 0 ? Math.round((stats.correct / session.total) * 1000) / 10 : 0;
+  uni.showModal({
+    title: '练习结果',
+    content: `共 ${session.total} 题\n已答：${answeredCount.value}\n正确：${stats.correct}\n错误：${stats.wrong}\n未答：${unanswered}\n正确率：${correctRate}%`,
+    showCancel: false,
+  });
 };
 
 watch(currentQuestionId, (id) => {
@@ -524,5 +678,63 @@ onLoad((options) => {
   margin-top: 40rpx;
   text-align: center;
   color: #6b7280;
+}
+
+.auto-tip {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 8rpx 0;
+}
+
+.floating-actions {
+  position: fixed;
+  right: 20rpx;
+  bottom: 30rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10rpx;
+  z-index: 10;
+}
+
+.fav-btn {
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.1);
+  border-radius: 16rpx;
+}
+
+.stat-badges {
+  display: flex;
+  gap: 8rpx;
+}
+
+.stat {
+  padding: 8rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #fff;
+  box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.1);
+}
+
+.stat.correct {
+  background: #10b981;
+}
+
+.stat.wrong {
+  background: #ef4444;
+}
+
+.result-btn {
+  background: #111827;
+  color: #fff;
+  border: none;
+  padding: 10rpx 16rpx;
+  border-radius: 10rpx;
+  font-size: 24rpx;
+}
+
+.result-btn:disabled {
+  background: #9ca3af;
+  color: #f3f4f6;
 }
 </style>

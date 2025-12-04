@@ -14,10 +14,35 @@ function normalizeNode(node = {}) {
   };
 }
 
-export async function fetchCategoryTree() {
-  const tree = await request({ url: '/categories/tree', method: 'GET' });
-  if (!Array.isArray(tree)) return [];
-  return tree.map((item) => normalizeNode(item));
+// 简单缓存分类树，减少重复请求导致的等待
+let cachedTree = null;
+let cachedAt = 0;
+let pendingPromise = null;
+const CACHE_TTL = 60 * 1000; // 1 分钟
+
+function cloneTree(tree) {
+  return JSON.parse(JSON.stringify(tree));
+}
+
+export async function fetchCategoryTree(force = false) {
+  const now = Date.now();
+  if (!force && cachedTree && now - cachedAt < CACHE_TTL) {
+    return cloneTree(cachedTree);
+  }
+  if (!force && pendingPromise) {
+    return cloneTree(await pendingPromise);
+  }
+  pendingPromise = request({ url: '/categories/tree', method: 'GET' }).then((tree) => {
+    if (!Array.isArray(tree)) return [];
+    const normalized = tree.map((item) => normalizeNode(item));
+    cachedTree = normalized;
+    cachedAt = Date.now();
+    return normalized;
+  }).finally(() => {
+    pendingPromise = null;
+  });
+  const result = await pendingPromise;
+  return cloneTree(result);
 }
 
 export async function fetchCategories() {
