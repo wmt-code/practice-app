@@ -24,8 +24,7 @@ const _sfc_main = {
     const fallbackUser = () => api_user.getCachedProfile() || {
       nickname: "未登录",
       avatar: "/static/uni.png",
-      loggedIn: false,
-      points: 0
+      loggedIn: false
     };
     const user = common_vendor.ref(fallbackUser());
     const progress = common_vendor.ref(api_progress.emptyProgress());
@@ -97,34 +96,28 @@ const _sfc_main = {
           type: "success"
         })
       } : {}, {
-        e: common_vendor.p({
-          text: "积分",
-          type: "primary"
-        }),
-        f: common_vendor.t(user.value.points || 0),
-        g: common_vendor.t(progress.value.answeredQuestions),
-        h: common_vendor.t(progress.value.totalQuestions),
-        i: !user.value.loggedIn
+        e: common_vendor.t(progress.value.answeredQuestions),
+        f: common_vendor.t(progress.value.totalQuestions),
+        g: !user.value.loggedIn
       }, !user.value.loggedIn ? {
-        j: common_vendor.o(goProfile)
+        h: common_vendor.o(goProfile)
       } : {}, {
-        k: common_vendor.t(progress.value.correctRate || 0),
-        l: progress.value.percent || 0,
-        m: common_vendor.t(progress.value.answeredQuestions),
-        n: common_vendor.t(progress.value.totalQuestions),
-        o: common_vendor.t(user.value.points || 0),
-        p: common_vendor.p({
+        i: common_vendor.t(progress.value.correctRate || 0),
+        j: progress.value.percent || 0,
+        k: common_vendor.t(progress.value.answeredQuestions),
+        l: common_vendor.t(progress.value.totalQuestions),
+        m: common_vendor.p({
           ["is-shadow"]: false
         }),
-        q: common_vendor.p({
+        n: common_vendor.p({
           title: "分类进度",
           type: "line",
           padding: true
         }),
-        r: common_vendor.f(progress.value.categories, (cat, k0, i0) => {
+        o: common_vendor.f(progress.value.categories, (cat, k0, i0) => {
           return {
             a: common_vendor.t(cat.name),
-            b: "4978fed5-4-" + i0,
+            b: "4978fed5-3-" + i0,
             c: common_vendor.p({
               text: cat.correct + "/" + cat.total,
               type: "primary"
@@ -134,17 +127,17 @@ const _sfc_main = {
             f: cat.id
           };
         }),
-        s: common_vendor.p({
+        p: common_vendor.p({
           title: "推荐题目",
           ["sub-title"]: "从未做过的题目里精选",
           type: "line",
           padding: true
         }),
-        t: recommended.value.length
+        q: recommended.value.length
       }, recommended.value.length ? {
-        v: common_vendor.f(recommended.value, (item, k0, i0) => {
+        r: common_vendor.f(recommended.value, (item, k0, i0) => {
           return common_vendor.e({
-            a: "4978fed5-7-" + i0 + "," + ("4978fed5-6-" + i0),
+            a: "4978fed5-6-" + i0 + "," + ("4978fed5-5-" + i0),
             b: common_vendor.p({
               text: renderType(item.type),
               size: "mini",
@@ -152,14 +145,14 @@ const _sfc_main = {
             }),
             c: item.difficulty
           }, item.difficulty ? {
-            d: "4978fed5-8-" + i0 + "," + ("4978fed5-6-" + i0),
+            d: "4978fed5-7-" + i0 + "," + ("4978fed5-5-" + i0),
             e: common_vendor.p({
               text: renderDifficulty(item.difficulty),
               size: "mini",
               type: "warning"
             })
           } : {}, {
-            f: "4978fed5-9-" + i0 + "," + ("4978fed5-6-" + i0),
+            f: "4978fed5-8-" + i0 + "," + ("4978fed5-5-" + i0),
             g: common_vendor.p({
               text: getCategoryName(item.categoryId),
               size: "mini",
@@ -168,7 +161,7 @@ const _sfc_main = {
             h: common_vendor.t(item.score),
             i: item.id,
             j: common_vendor.o(($event) => goQuestion(item.id), item.id),
-            k: "4978fed5-6-" + i0,
+            k: "4978fed5-5-" + i0,
             l: common_vendor.p({
               ["is-shadow"]: false,
               title: item.title
@@ -176,7 +169,7 @@ const _sfc_main = {
           });
         })
       } : {}, {
-        w: common_vendor.o(goQuestionBank)
+        s: common_vendor.o(goQuestionBank)
       });
     };
   }

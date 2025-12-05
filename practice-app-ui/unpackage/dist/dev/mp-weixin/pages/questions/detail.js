@@ -77,7 +77,7 @@ const _sfc_main = {
         selected.value = [];
         feedback.value = null;
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/detail.vue:162", err);
+        common_vendor.index.__f__("error", "at pages/questions/detail.vue:161", err);
         common_vendor.index.showToast({ title: "加载失败", icon: "none" });
       }
     };
@@ -102,7 +102,7 @@ const _sfc_main = {
           icon: res.isCorrect ? "success" : "none"
         });
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/detail.vue:187", err);
+        common_vendor.index.__f__("error", "at pages/questions/detail.vue:186", err);
         common_vendor.index.showToast({ title: "提交失败", icon: "none" });
       } finally {
         submitting.value = false;
@@ -177,10 +177,9 @@ const _sfc_main = {
         z: common_vendor.t(feedback.value.explanation),
         A: feedback.value.progress
       }, feedback.value.progress ? {
-        B: common_vendor.t(feedback.value.progress.points),
-        C: common_vendor.t(feedback.value.progress.percent)
+        B: common_vendor.t(feedback.value.progress.percent)
       } : {}, {
-        D: common_vendor.p({
+        C: common_vendor.p({
           title: "判题结果",
           ["is-shadow"]: false
         })

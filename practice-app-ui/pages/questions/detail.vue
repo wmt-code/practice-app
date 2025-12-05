@@ -81,7 +81,6 @@
         <text>{{ feedback.explanation }}</text>
       </view>
       <view class="progress-info" v-if="feedback.progress">
-        <text class="muted">当前积分：{{ feedback.progress.points }}</text>
         <text class="muted">总进度：{{ feedback.progress.percent }}%</text>
       </view>
     </uni-card>

@@ -9,8 +9,6 @@
             <uni-badge v-if="user.loggedIn" text="已登录" type="success" />
           </view>
           <view class="meta">
-            <uni-badge text="积分" type="primary" class="mr-8" />
-            <text class="meta-text">{{ user.points || 0 }}</text>
             <text class="meta-text">已完成 {{ progress.answeredQuestions }}/{{ progress.totalQuestions }}</text>
           </view>
         </view>
@@ -26,7 +24,6 @@
         <progress :percent="progress.percent || 0" active stroke-width="8" />
         <view class="progress-footer">
           <text class="muted">已做 {{ progress.answeredQuestions }} / {{ progress.totalQuestions }}</text>
-          <text class="muted">当前积分 {{ user.points || 0 }}</text>
         </view>
       </view>
     </uni-card>
@@ -93,7 +90,6 @@ const fallbackUser = () =>
     nickname: '未登录',
     avatar: '/static/uni.png',
     loggedIn: false,
-    points: 0,
   };
 
 const user = ref(fallbackUser());

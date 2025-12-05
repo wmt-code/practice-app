@@ -5,10 +5,6 @@
           <image :src="previewAvatar" class="avatar" mode="aspectFill" />
           <view class="info">
             <view class="nickname">{{ user.nickname || '未登录' }}</view>
-            <view class="row">
-              <uni-badge text="积分" type="primary" />
-              <text class="muted"> {{ user.points || 0 }}</text>
-            </view>
           </view>
           <button size="mini" type="primary" class="login-btn" @tap="handleWeixinLogin">
             {{ user.loggedIn ? '重新登录' : '微信登录' }}
@@ -133,7 +129,6 @@ const defaultUser = {
   nickname: '未登录',
   avatar: '/static/uni.png',
   loggedIn: false,
-  points: 0,
 };
 
   const fallbackUser = () => normalizeUser(getCachedProfile()) || defaultUser;

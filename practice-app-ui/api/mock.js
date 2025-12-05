@@ -401,7 +401,6 @@ const initialUser = {
   id: 'guest',
   nickname: '未登录',
   avatar: '/static/uni.png',
-  points: 0,
   loggedIn: false,
 };
 
@@ -480,7 +479,6 @@ function buildProgress() {
     answeredQuestions,
     correctCount,
     correctRate,
-    points: state.user.points,
     categories: categoriesProgress,
     percent: totalQuestions ? Math.round((answeredQuestions / totalQuestions) * 100) : 0,
   };
@@ -503,7 +501,6 @@ export async function loginWithWeixin(profile = {}) {
     id: `wx-${Date.now()}`,
     nickname,
     avatar,
-    points: Math.max(state.user.points, 10),
     loggedIn: true,
   };
   persist();
@@ -515,7 +512,6 @@ export async function updateUserProfile(payload = {}) {
     ...state.user,
     nickname: payload.nickname || state.user.nickname,
     avatar: payload.avatar || state.user.avatar,
-    points: state.user.points + 1,
   };
   persist();
   return delay({ ...state.user });
@@ -598,7 +594,6 @@ export async function submitAnswer({ questionId, chosen = [], spentSeconds = 20 
     answeredAt: new Date().toISOString(),
   };
   state.records.unshift(record);
-  state.user.points += isCorrect ? 3 : 1;
   persist();
   return delay({
     isCorrect,

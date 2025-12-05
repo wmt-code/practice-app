@@ -11,7 +11,6 @@ export function normalizeUser(user) {
     nickname: user.nickname || user.username || '未登录',
     avatar: user.avatar || DEFAULT_AVATAR,
     loggedIn: !!user.id,
-    points: user.points ?? 0,
   };
 }
 
