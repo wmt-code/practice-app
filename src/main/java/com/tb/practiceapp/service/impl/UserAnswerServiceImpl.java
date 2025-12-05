@@ -101,6 +101,7 @@ public class UserAnswerServiceImpl extends ServiceImpl<UserAnswerMapper, UserAns
         this.remove(new LambdaQueryWrapper<UserAnswer>()
                 .eq(UserAnswer::getUserId, userId)
                 .eq(UserAnswer::getCategoryId, categoryId));
+        userProgressService.clearProgress(userId, categoryId);
     }
 
     private AnswerResultVO buildResultVO(Question question, List<String> userAnswersRaw, List<String> correctAnswers, boolean correct, int timeSpent, LocalDateTime answeredAt) {

@@ -82,4 +82,14 @@ public class UserProgressServiceImpl extends ServiceImpl<UserProgressMapper, Use
         }
         return responses;
     }
+
+    @Override
+    public void clearProgress(Long userId, Long categoryId) {
+        if (categoryId == null) {
+            return;
+        }
+        this.remove(new LambdaQueryWrapper<UserProgress>()
+                .eq(UserProgress::getUserId, userId)
+                .eq(UserProgress::getCategoryId, categoryId));
+    }
 }

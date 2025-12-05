@@ -19,4 +19,9 @@ public interface IUserProgressService extends IService<UserProgress> {
     void updateProgress(Long userId, Long categoryId, boolean correct);
 
     List<ProgressResponse> getProgress(Long userId);
+
+    /**
+     * 清空用户指定分类的进度
+     */
+    void clearProgress(Long userId, Long categoryId);
 }
