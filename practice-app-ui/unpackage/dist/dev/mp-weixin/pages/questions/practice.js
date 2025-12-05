@@ -5,18 +5,18 @@ const api_answers = require("../../api/answers.js");
 const api_categories = require("../../api/categories.js");
 const api_favorites = require("../../api/favorites.js");
 if (!Array) {
-  const _easycom_uni_tag2 = common_vendor.resolveComponent("uni-tag");
-  const _easycom_uni_load_more2 = common_vendor.resolveComponent("uni-load-more");
   const _easycom_uni_icons2 = common_vendor.resolveComponent("uni-icons");
+  const _easycom_uni_load_more2 = common_vendor.resolveComponent("uni-load-more");
   const _easycom_uni_fav2 = common_vendor.resolveComponent("uni-fav");
-  (_easycom_uni_tag2 + _easycom_uni_load_more2 + _easycom_uni_icons2 + _easycom_uni_fav2)();
+  const _easycom_uni_popup2 = common_vendor.resolveComponent("uni-popup");
+  (_easycom_uni_icons2 + _easycom_uni_load_more2 + _easycom_uni_fav2 + _easycom_uni_popup2)();
 }
-const _easycom_uni_tag = () => "../../uni_modules/uni-tag/components/uni-tag/uni-tag.js";
-const _easycom_uni_load_more = () => "../../uni_modules/uni-load-more/components/uni-load-more/uni-load-more.js";
 const _easycom_uni_icons = () => "../../uni_modules/uni-icons/components/uni-icons/uni-icons.js";
+const _easycom_uni_load_more = () => "../../uni_modules/uni-load-more/components/uni-load-more/uni-load-more.js";
 const _easycom_uni_fav = () => "../../uni_modules/uni-fav/components/uni-fav/uni-fav.js";
+const _easycom_uni_popup = () => "../../uni_modules/uni-popup/components/uni-popup/uni-popup.js";
 if (!Math) {
-  (_easycom_uni_tag + _easycom_uni_load_more + _easycom_uni_icons + _easycom_uni_fav)();
+  (_easycom_uni_icons + _easycom_uni_load_more + _easycom_uni_fav + _easycom_uni_popup)();
 }
 const _sfc_main = {
   __name: "practice",
@@ -50,6 +50,7 @@ const _sfc_main = {
       wrong: 0
     });
     const resultShown = common_vendor.ref(false);
+    const cardPopup = common_vendor.ref(null);
     const currentQuestionId = common_vendor.computed(() => {
       var _a;
       return (_a = questions.value[currentIndex.value]) == null ? void 0 : _a.id;
@@ -71,6 +72,21 @@ const _sfc_main = {
         return "";
       return currentFeedback.value.explanation || "暂无解析";
     });
+    const progressPercent = common_vendor.computed(() => {
+      if (!session.total)
+        return 0;
+      return Math.min(100, Math.round((currentIndex.value + 1) / session.total * 100));
+    });
+    const questionStatuses = common_vendor.computed(
+      () => questions.value.map((q, idx) => {
+        const fb = feedback[q.id];
+        let status = "unanswered";
+        if (fb) {
+          status = fb.isCorrect ? "correct" : "wrong";
+        }
+        return { idx, status };
+      })
+    );
     const renderType = (type) => {
       const text = String(type || "");
       const lower = text.toLowerCase();
@@ -123,7 +139,7 @@ const _sfc_main = {
         session.category = current || null;
         session.parent = parent || null;
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:258", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:340", err);
       }
     };
     const initFavorites = async () => {
@@ -133,7 +149,7 @@ const _sfc_main = {
           favoriteMap[item.questionId] = true;
         });
       } catch (err) {
-        common_vendor.index.__f__("warn", "at pages/questions/practice.vue:269", "fetch favorites failed, skip", err);
+        common_vendor.index.__f__("warn", "at pages/questions/practice.vue:351", "fetch favorites failed, skip", err);
       }
     };
     const initAnswers = () => {
@@ -155,7 +171,7 @@ const _sfc_main = {
             q.score = q.score || detail.score;
           }
         } catch (err) {
-          common_vendor.index.__f__("warn", "at pages/questions/practice.vue:293", "backfill options failed", q.id, err);
+          common_vendor.index.__f__("warn", "at pages/questions/practice.vue:375", "backfill options failed", q.id, err);
         }
       }
       initAnswers();
@@ -194,7 +210,7 @@ const _sfc_main = {
         initAnswers();
         await backfillOptions(list);
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:336", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:418", err);
         common_vendor.index.showToast({ title: "加载题目失败", icon: "none" });
       } finally {
         pagination.loading = false;
@@ -225,10 +241,10 @@ const _sfc_main = {
         const categoryPromise = loadCategoryInfo(params.categoryId);
         const questionPromise = params.mode === "random" ? loadRandom() : loadSequencePage(1, false);
         await Promise.all([categoryPromise, questionPromise]);
-        (_a = favoritesPromise == null ? void 0 : favoritesPromise.catch) == null ? void 0 : _a.call(favoritesPromise, (err) => common_vendor.index.__f__("warn", "at pages/questions/practice.vue:368", "favorites init failed", err));
+        (_a = favoritesPromise == null ? void 0 : favoritesPromise.catch) == null ? void 0 : _a.call(favoritesPromise, (err) => common_vendor.index.__f__("warn", "at pages/questions/practice.vue:450", "favorites init failed", err));
         currentIndex.value = 0;
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:371", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:453", err);
         common_vendor.index.showToast({ title: err.message || "加载失败", icon: "none" });
       } finally {
         loading.value = false;
@@ -285,8 +301,8 @@ const _sfc_main = {
         }
         maybeShowResult();
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:426", err);
-        common_vendor.index.showToast({ title: "提交失败", icon: "none" });
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:508", err);
+        common_vendor.index.showToast({ title: "提交失败：" + err.message, icon: "none" });
       } finally {
         submitting.value = false;
       }
@@ -333,7 +349,7 @@ const _sfc_main = {
           common_vendor.index.showToast({ title: "已收藏", icon: "success" });
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:475", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:557", err);
         common_vendor.index.showToast({ title: err.message || "操作失败", icon: "none" });
       }
     };
@@ -352,6 +368,43 @@ const _sfc_main = {
         showCancel: false
       });
     };
+    const goBack = () => {
+      common_vendor.index.navigateBack({
+        delta: 1,
+        fail: () => {
+          common_vendor.index.switchTab({ url: "/pages/questions/index" });
+        }
+      });
+    };
+    const refreshCurrent = () => {
+      loadSession({
+        categoryId: params.categoryId,
+        mode: params.mode,
+        count: params.count
+      });
+    };
+    const openAnswerCard = () => {
+      var _a, _b;
+      (_b = (_a = cardPopup.value) == null ? void 0 : _a.open) == null ? void 0 : _b.call(_a);
+    };
+    const closeAnswerCard = () => {
+      var _a, _b;
+      (_b = (_a = cardPopup.value) == null ? void 0 : _a.close) == null ? void 0 : _b.call(_a);
+    };
+    const jumpTo = (idx) => {
+      if (idx < 0 || idx >= questions.value.length)
+        return;
+      currentIndex.value = idx;
+      closeAnswerCard();
+    };
+    const resetPractice = () => {
+      closeAnswerCard();
+      loadSession({
+        categoryId: params.categoryId,
+        mode: params.mode,
+        count: params.count
+      });
+    };
     common_vendor.watch(currentQuestionId, (id) => {
       if (id && !answers[id]) {
         answers[id] = [];
@@ -363,22 +416,40 @@ const _sfc_main = {
     return (_ctx, _cache) => {
       var _a, _b, _c;
       return common_vendor.e({
-        a: common_vendor.t(((_a = session.parent) == null ? void 0 : _a.name) || "题库"),
-        b: common_vendor.t(((_b = session.category) == null ? void 0 : _b.name) || "练习"),
-        c: common_vendor.p({
-          text: session.mode === "random" ? "随机练习" : "顺序练习",
-          type: session.mode === "random" ? "warning" : "primary",
-          size: "mini"
+        a: common_vendor.p({
+          type: "back",
+          size: "18",
+          color: "#111827"
         }),
-        d: common_vendor.t(currentIndex.value + 1),
-        e: common_vendor.t(session.total),
-        f: loading.value
+        b: common_vendor.o(goBack),
+        c: common_vendor.p({
+          type: "refresh",
+          size: "18",
+          color: "#111827"
+        }),
+        d: common_vendor.o(refreshCurrent),
+        e: common_vendor.p({
+          type: "chat",
+          size: "20",
+          color: "#111827"
+        }),
+        f: common_vendor.p({
+          type: "more",
+          size: "20",
+          color: "#111827"
+        }),
+        g: common_vendor.t(((_a = session.parent) == null ? void 0 : _a.name) || "题库"),
+        h: common_vendor.t(((_b = session.category) == null ? void 0 : _b.name) || "练习"),
+        i: common_vendor.t(currentIndex.value + 1),
+        j: common_vendor.t(session.total || 0),
+        k: progressPercent.value + "%",
+        l: loading.value
       }, loading.value ? {
-        g: common_vendor.p({
+        m: common_vendor.p({
           status: "loading"
         })
       } : !session.total ? {} : {
-        i: common_vendor.f(questions.value, (item, idx, i0) => {
+        o: common_vendor.f(questions.value, (item, idx, i0) => {
           var _a2;
           return common_vendor.e({
             a: common_vendor.t(renderType(item.type)),
@@ -418,55 +489,74 @@ const _sfc_main = {
             n: !currentSelected.value.length || hasAnswered.value,
             o: common_vendor.o(submitAnswer, item.id)
           } : {
-            p: "1e7fffe1-2-" + i0,
+            p: "1e7fffe1-5-" + i0,
             q: common_vendor.p({
               type: "gear",
               size: "18",
               color: "#6b7280"
             })
           }, ((_a2 = currentFeedback.value) == null ? void 0 : _a2.isCorrect) ? {} : {}, currentFeedback.value ? common_vendor.e({
-            r: "1e7fffe1-3-" + i0,
+            r: "1e7fffe1-6-" + i0,
             s: common_vendor.p({
               type: currentFeedback.value.isCorrect ? "checkmarkempty" : "closeempty",
               color: currentFeedback.value.isCorrect ? "#10b981" : "#ef4444",
               size: "22"
             }),
-            t: common_vendor.t(currentFeedback.value.isCorrect ? "回答正确" : "回答错误"),
-            v: common_vendor.t((currentFeedback.value.correctAnswer || []).join(", ") || "--"),
-            w: common_vendor.t(currentExplanation.value),
-            x: !currentFeedback.value.isCorrect
+            t: common_vendor.t((currentFeedback.value.correctAnswer || []).join(", ") || "--"),
+            v: common_vendor.t(currentExplanation.value),
+            w: !currentFeedback.value.isCorrect
           }, !currentFeedback.value.isCorrect ? {} : {}, {
-            y: common_vendor.n(currentFeedback.value.isCorrect ? "success" : "danger")
+            x: common_vendor.n(currentFeedback.value.isCorrect ? "success" : "danger")
           }) : {}, {
-            z: item.id
+            y: item.id
           });
         }),
-        j: requiresManual(currentQuestionType.value),
-        k: (_c = currentFeedback.value) == null ? void 0 : _c.isCorrect,
-        l: currentFeedback.value,
-        m: currentIndex.value,
-        n: common_vendor.o(onSwipe)
+        p: common_vendor.t(session.mode === "random" ? "随机练习" : "顺序练习"),
+        q: requiresManual(currentQuestionType.value),
+        r: (_c = currentFeedback.value) == null ? void 0 : _c.isCorrect,
+        s: currentFeedback.value,
+        t: currentIndex.value,
+        v: common_vendor.o(onSwipe)
       }, {
-        h: !session.total,
-        o: session.total
+        n: !session.total,
+        w: session.total
       }, session.total ? {
-        p: common_vendor.o(toggleFavorite),
-        q: common_vendor.p({
+        x: common_vendor.o(toggleFavorite),
+        y: common_vendor.p({
           checked: isFavorited.value,
-          bgColor: "#f9fafb",
-          bgColorChecked: "#1d4ed8",
-          fgColor: "#1f2937",
-          fgColorChecked: "#fff",
+          bgColor: "#f1f5f9",
+          bgColorChecked: "#111827",
+          fgColor: "#111827",
+          fgColorChecked: "#ffffff",
           contentText: {
             contentDefault: "收藏",
             contentFav: "已收藏"
           }
         }),
-        r: common_vendor.t(stats.correct),
-        s: common_vendor.t(stats.wrong),
-        t: answeredCount.value < session.total,
-        v: common_vendor.o(openResultSummary)
-      } : {});
+        z: common_vendor.t(stats.correct),
+        A: common_vendor.t(stats.wrong),
+        B: common_vendor.o(openAnswerCard)
+      } : {}, {
+        C: common_vendor.f(questionStatuses.value, (item, k0, i0) => {
+          var _a2;
+          return {
+            a: common_vendor.t(item.idx + 1),
+            b: common_vendor.t(renderType((_a2 = questions.value[item.idx]) == null ? void 0 : _a2.type)),
+            c: item.idx,
+            d: common_vendor.n(item.status),
+            e: common_vendor.o(($event) => jumpTo(item.idx), item.idx)
+          };
+        }),
+        D: common_vendor.o(resetPractice),
+        E: common_vendor.o(openResultSummary),
+        F: common_vendor.sr(cardPopup, "1e7fffe1-8", {
+          "k": "cardPopup"
+        }),
+        G: common_vendor.p({
+          type: "bottom",
+          ["border-radius"]: "12"
+        })
+      });
     };
   }
 };

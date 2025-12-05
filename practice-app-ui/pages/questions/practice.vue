@@ -1,21 +1,37 @@
 <template>
   <view class="page">
-    <view class="header">
-      <view class="title-row">
-        <view>
-          <text class="breadcrumb">{{ session.parent?.name || '题库' }}</text>
-          <view class="title">
-            <text>{{ session.category?.name || '练习' }}</text>
-            <uni-tag
-              :text="session.mode === 'random' ? '随机练习' : '顺序练习'"
-              :type="session.mode === 'random' ? 'warning' : 'primary'"
-              size="mini"
-            />
-          </view>
+    <view class="top-bar">
+      <view class="nav-left">
+        <button class="icon-btn" size="mini" plain @tap="goBack">
+          <uni-icons type="back" size="18" color="#111827" />
+        </button>
+        <button class="icon-btn" size="mini" plain @tap="refreshCurrent">
+          <uni-icons type="refresh" size="18" color="#111827" />
+        </button>
+      </view>
+      <view class="mode-tabs">
+        <view class="mode-tab active">答题</view>
+        <view class="mode-tab">背题</view>
+        <view class="mode-tab">语音</view>
+      </view>
+      <view class="nav-right">
+        <uni-icons type="chat" size="20" color="#111827" />
+        <uni-icons type="more" size="20" color="#111827" />
+      </view>
+    </view>
+
+    <view class="meta-row">
+      <view class="meta-left">
+        <view class="meta-dot"></view>
+        <view class="meta-info">
+          <text class="meta-title">{{ session.parent?.name || '题库' }}</text>
+          <text class="meta-sub">{{ session.category?.name || '练习' }}</text>
         </view>
-        <view class="progress">
-          <text class="muted">进度</text>
-          <text class="count">{{ currentIndex + 1 }}/{{ session.total }}</text>
+      </view>
+      <view class="meta-progress">
+        <text class="progress-text">{{ currentIndex + 1 }} / {{ session.total || 0 }}</text>
+        <view class="progress-line">
+          <view class="progress-fill" :style="{ width: progressPercent + '%' }"></view>
         </view>
       </view>
     </view>
@@ -37,10 +53,13 @@
     >
       <swiper-item v-for="(item, idx) in questions" :key="item.id">
         <view class="card">
-          <view class="question-title">
+          <view class="question-header">
             <view class="type-tag">{{ renderType(item.type) }}</view>
-            <text class="text">{{ idx + 1 }}、{{ item.title }}</text>
+            <view class="mode-chip">{{ session.mode === 'random' ? '随机练习' : '顺序练习' }}</view>
+            <view class="question-index">第 {{ idx + 1 }} 题</view>
           </view>
+
+          <view class="question-title">{{ item.title }}</view>
 
           <view v-if="isMultiple(item.type)" class="options">
             <checkbox-group @change="onMultipleChange">
@@ -107,9 +126,9 @@
                 :color="currentFeedback.isCorrect ? '#10b981' : '#ef4444'"
                 size="22"
               />
-              <text class="result-text">
+            <!--  <text class="result-text">
                 {{ currentFeedback.isCorrect ? '回答正确' : '回答错误' }}
-              </text>
+              </text> -->
             </view>
             <view class="answer">
               <text class="muted">正确答案：</text>
@@ -127,25 +146,73 @@
       </swiper-item>
     </swiper>
 
-    <view v-if="session.total" class="floating-actions">
-      <uni-fav
-        class="fav-btn"
-        :checked="isFavorited"
-        bgColor="#f9fafb"
-        bgColorChecked="#1d4ed8"
-        fgColor="#1f2937"
-        fgColorChecked="#fff"
-        :contentText="{contentDefault: '收藏', contentFav: '已收藏'}"
-        @click="toggleFavorite"
-      />
-      <view class="stat-badges">
-        <view class="stat correct">对 {{ stats.correct }}</view>
-        <view class="stat wrong">错 {{ stats.wrong }}</view>
+    <view v-if="session.total" class="bottom-dock">
+      <button class="dock-btn share" size="mini" type="default" plain open-type="share">
+        分享
+      </button>
+      <view class="dock-center">
+        <uni-fav
+          class="fav-btn"
+          :checked="isFavorited"
+          bgColor="#f1f5f9"
+          bgColorChecked="#111827"
+          fgColor="#111827"
+          fgColorChecked="#ffffff"
+          :contentText="{contentDefault: '收藏', contentFav: '已收藏'}"
+          @click="toggleFavorite"
+        />
+        <view class="stat-pill correct">对 {{ stats.correct }}</view>
+        <view class="stat-pill wrong">错 {{ stats.wrong }}</view>
       </view>
-      <button class="result-btn" size="mini" type="default" :disabled="answeredCount < session.total" @tap="openResultSummary">
-        查看结果
+      <button
+        class="dock-btn result"
+        size="mini"
+        type="primary"
+        @tap="openAnswerCard"
+      >
+        答题卡
       </button>
     </view>
+
+    <uni-popup ref="cardPopup" type="bottom" border-radius="12">
+      <view class="answer-card">
+        <view class="answer-card-header">
+          <text class="title">答题卡</text>
+          <view class="legend">
+            <view class="legend-item">
+              <view class="legend-dot unanswered"></view>
+              <text>未作答</text>
+            </view>
+            <view class="legend-item">
+              <view class="legend-dot correct"></view>
+              <text>答对</text>
+            </view>
+            <view class="legend-item">
+              <view class="legend-dot wrong"></view>
+              <text>答错</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="card-grid">
+          <view
+            v-for="item in questionStatuses"
+            :key="item.idx"
+            class="card-item"
+            :class="item.status"
+            @tap="jumpTo(item.idx)"
+          >
+            <text class="card-number">{{ item.idx + 1 }}</text>
+            <text class="card-type">{{ renderType(questions[item.idx]?.type) }}</text>
+          </view>
+        </view>
+
+        <view class="answer-card-footer">
+          <button class="footer-btn ghost" @tap="resetPractice">重新练习</button>
+          <button class="footer-btn primary" @tap="openResultSummary">查看练习结果</button>
+        </view>
+      </view>
+    </uni-popup>
   </view>
 </template>
 
@@ -186,6 +253,7 @@ const stats = reactive({
   wrong: 0,
 });
 const resultShown = ref(false);
+const cardPopup = ref(null);
 
 const currentQuestionId = computed(() => questions.value[currentIndex.value]?.id);
 const currentQuestion = computed(() => questions.value[currentIndex.value] || {});
@@ -201,6 +269,20 @@ const currentExplanation = computed(() => {
   if (!currentFeedback.value) return '';
   return currentFeedback.value.explanation || '暂无解析';
 });
+const progressPercent = computed(() => {
+  if (!session.total) return 0;
+  return Math.min(100, Math.round(((currentIndex.value + 1) / session.total) * 100));
+});
+const questionStatuses = computed(() =>
+  questions.value.map((q, idx) => {
+    const fb = feedback[q.id];
+    let status = 'unanswered';
+    if (fb) {
+      status = fb.isCorrect ? 'correct' : 'wrong';
+    }
+    return { idx, status };
+  }),
+);
 
 const renderType = (type) => {
   const text = String(type || '');
@@ -424,7 +506,7 @@ const submitAnswer = async () => {
     maybeShowResult();
   } catch (err) {
     console.error(err);
-    uni.showToast({ title: '提交失败', icon: 'none' });
+    uni.showToast({ title: '提交失败：'+err.message, icon: 'none' });
   } finally {
     submitting.value = false;
   }
@@ -489,6 +571,46 @@ const openResultSummary = () => {
   });
 };
 
+const goBack = () => {
+  uni.navigateBack({
+    delta: 1,
+    fail: () => {
+      uni.switchTab({ url: '/pages/questions/index' });
+    },
+  });
+};
+
+const refreshCurrent = () => {
+  loadSession({
+    categoryId: params.categoryId,
+    mode: params.mode,
+    count: params.count,
+  });
+};
+
+const openAnswerCard = () => {
+  cardPopup.value?.open?.();
+};
+
+const closeAnswerCard = () => {
+  cardPopup.value?.close?.();
+};
+
+const jumpTo = (idx) => {
+  if (idx < 0 || idx >= questions.value.length) return;
+  currentIndex.value = idx;
+  closeAnswerCard();
+};
+
+const resetPractice = () => {
+  closeAnswerCard();
+  loadSession({
+    categoryId: params.categoryId,
+    mode: params.mode,
+    count: params.count,
+  });
+};
+
 watch(currentQuestionId, (id) => {
   if (id && !answers[id]) {
     answers[id] = [];
@@ -503,87 +625,177 @@ onLoad((options) => {
 <style lang="scss" scoped>
 .page {
   min-height: 100vh;
-  padding: 16rpx;
-  background: #f7f8fb;
-}
-
-.header {
-  background: #ffffff;
-  border-radius: 16rpx;
-  padding: 14rpx;
-  box-shadow: 0 12rpx 30rpx rgba(31, 56, 88, 0.06);
-}
-
-.title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.breadcrumb {
-  color: #6b7280;
-  font-size: 24rpx;
-}
-
-.title {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  font-size: 32rpx;
-  font-weight: 700;
-  margin-top: 4rpx;
-}
-
-.progress {
-  display: flex;
-  align-items: baseline;
-  gap: 8rpx;
-}
-
-.muted {
-  color: #6b7280;
-  font-size: 24rpx;
-}
-
-.count {
-  font-size: 28rpx;
-  font-weight: 700;
-  color: #111827;
-}
-
-.swiper {
-  margin-top: 12rpx;
-  height: calc(100vh - 220rpx);
-}
-
-.card {
-  background: #ffffff;
-  border-radius: 18rpx;
-  padding: 20rpx;
-  box-shadow: 0 14rpx 34rpx rgba(31, 56, 88, 0.08);
-  height: calc(100% - 20rpx);
+  padding: 20rpx 20rpx 180rpx;
+  background: #f4f6fb;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
 }
 
-.question-title {
+.top-bar {
+  background: #ffffff;
+  border-radius: 18rpx;
+  padding: 14rpx;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 12rpx 30rpx rgba(31, 56, 88, 0.08);
+}
+
+.nav-left,
+.nav-right {
+  display: flex;
+  align-items: center;
   gap: 10rpx;
+}
+
+.icon-btn {
+  border-radius: 999rpx;
+  background: #f8fafc;
+  border: 2rpx solid #e5e7eb;
+}
+
+.mode-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.mode-tab {
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.mode-tab.active {
+  background: #111827;
+  color: #ffffff;
+}
+
+.meta-row {
+  margin-top: 14rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12rpx 14rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+  box-shadow: 0 10rpx 26rpx rgba(31, 56, 88, 0.06);
+}
+
+.meta-left {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.meta-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.meta-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+}
+
+.meta-title {
+  font-size: 26rpx;
+  color: #6b7280;
+}
+
+.meta-sub {
   font-size: 30rpx;
   font-weight: 700;
   color: #111827;
 }
 
-.type-tag {
-  padding: 6rpx 12rpx;
-  background: #e0ecff;
-  color: #1d4ed8;
-  border-radius: 10rpx;
+.meta-progress {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  min-width: 180rpx;
+}
+
+.progress-text {
+  font-size: 26rpx;
+  color: #111827;
+}
+
+.progress-line {
+  flex: 1;
+  height: 10rpx;
+  background: #e5e7eb;
+  border-radius: 999rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #22c55e);
+}
+
+.swiper {
+  margin-top: 16rpx;
+  flex: 1;
+  min-height: 60vh;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 18rpx;
+  padding: 22rpx;
+  box-shadow: 0 14rpx 34rpx rgba(31, 56, 88, 0.08);
+  height: calc(100% - 20rpx);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding-bottom: 60rpx;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
   font-size: 24rpx;
 }
 
-.options {
+.type-tag {
+  padding: 8rpx 14rpx;
+  background: #e0ecff;
+  color: #1d4ed8;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.mode-chip {
+  padding: 6rpx 12rpx;
+  border-radius: 12rpx;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.question-index {
+  margin-left: auto;
+  color: #6b7280;
+}
+
+.question-title {
   margin-top: 12rpx;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.5;
+}
+
+.options {
+  margin-top: 14rpx;
   flex: 1;
 }
 
@@ -602,14 +814,15 @@ onLoad((options) => {
 .option {
   display: flex;
   align-items: center;
-  padding: 14rpx 10rpx;
-  border-radius: 12rpx;
+  padding: 16rpx 14rpx;
+  border-radius: 14rpx;
   background: #f9fafb;
-  margin-bottom: 10rpx;
+  margin-bottom: 12rpx;
+  border: 2rpx solid #e5e7eb;
 }
 
 .opt-text {
-  margin-left: 10rpx;
+  margin-left: 12rpx;
   font-size: 28rpx;
   color: #1f2937;
 }
@@ -629,10 +842,10 @@ onLoad((options) => {
 }
 
 .analysis {
-  margin-top: 12rpx;
-  padding: 14rpx;
+  margin-top: 14rpx;
+  padding: 16rpx;
   border-radius: 12rpx;
-  background: #f9fafb;
+  background: #f8fafc;
 }
 
 .analysis.success {
@@ -680,6 +893,11 @@ onLoad((options) => {
   color: #6b7280;
 }
 
+.muted {
+  color: #6b7280;
+  font-size: 24rpx;
+}
+
 .auto-tip {
   display: flex;
   align-items: center;
@@ -687,28 +905,57 @@ onLoad((options) => {
   padding: 8rpx 0;
 }
 
-.floating-actions {
+.bottom-dock {
   position: fixed;
-  right: 20rpx;
-  bottom: 30rpx;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16rpx 20rpx 26rpx;
+  background: #ffffff;
+  box-shadow: 0 -10rpx 30rpx rgba(0, 0, 0, 0.08);
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10rpx;
-  z-index: 10;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+  box-sizing: border-box;
+}
+
+.dock-btn {
+  border-radius: 14rpx;
+  padding: 12rpx 20rpx;
+  font-size: 28rpx;
+}
+
+.dock-btn.share {
+  color: #10b981;
+  border: 2rpx solid #10b981;
+}
+
+.dock-btn.result {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  border: none;
+}
+
+.dock-btn:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+}
+
+.dock-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  justify-content: center;
 }
 
 .fav-btn {
   box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.1);
-  border-radius: 16rpx;
+  border-radius: 14rpx;
 }
 
-.stat-badges {
-  display: flex;
-  gap: 8rpx;
-}
-
-.stat {
+.stat-pill {
   padding: 8rpx 14rpx;
   border-radius: 999rpx;
   font-size: 24rpx;
@@ -716,25 +963,138 @@ onLoad((options) => {
   box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.1);
 }
 
-.stat.correct {
+.stat-pill.correct {
   background: #10b981;
 }
 
-.stat.wrong {
+.stat-pill.wrong {
   background: #ef4444;
 }
 
-.result-btn {
-  background: #111827;
-  color: #fff;
-  border: none;
-  padding: 10rpx 16rpx;
-  border-radius: 10rpx;
-  font-size: 24rpx;
+.answer-card {
+  background: #ffffff;
+  padding: 20rpx;
+  border-top-left-radius: 18rpx;
+  border-top-right-radius: 18rpx;
 }
 
-.result-btn:disabled {
-  background: #9ca3af;
-  color: #f3f4f6;
+.answer-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.answer-card-header .title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #111827;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  font-size: 24rpx;
+  color: #4b5563;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.legend-dot {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  border: 2rpx solid #d1d5db;
+}
+
+.legend-dot.unanswered {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+.legend-dot.correct {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.legend-dot.wrong {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120rpx, 1fr));
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.card-item {
+  background: #f3f4f6;
+  border-radius: 16rpx;
+  padding: 16rpx 12rpx;
+  text-align: center;
+  color: #4b5563;
+  border: 2rpx solid transparent;
+}
+
+.card-item .card-number {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.card-item .card-type {
+  margin-top: 4rpx;
+  font-size: 22rpx;
+  color: #6b7280;
+}
+
+.card-item.correct {
+  background: #ecfdf3;
+  color: #047857;
+  border-color: #34d399;
+}
+
+.card-item.wrong {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.card-item.unanswered {
+  background: #f3f4f6;
+  color: #4b5563;
+  border-color: #e5e7eb;
+}
+
+.answer-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.footer-btn {
+  flex: 1;
+  padding: 16rpx;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+}
+
+.footer-btn.ghost {
+  background: #ffffff;
+  color: #111827;
+  border: 2rpx solid #e5e7eb;
+}
+
+.footer-btn.primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  border: none;
 }
 </style>
