@@ -200,7 +200,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { fetchPracticeRandom, fetchPracticeSequence, fetchQuestionDetail } from '@/api/questions.js';
-import { submitAnswer as submitAnswerApi, fetchAnswerHistory } from '@/api/answers.js';
+import { submitAnswer as submitAnswerApi, fetchAnswerHistory, clearAnswerHistory } from '@/api/answers.js';
 import { fetchCategoryTree, flattenCategoryTree } from '@/api/categories.js';
 import { addFavorite, removeFavorite, fetchFavorites } from '@/api/favorites.js';
 
@@ -685,15 +685,26 @@ const resetPractice = () => {
     content: '确定清空当前答题记录并重新开始吗？',
     success: (res) => {
       if (res.confirm) {
-        clearProgressStorage();
-        closeAnswerCard();
-        loadSession({
-          categoryId: params.categoryId,
-          mode: params.mode,
-          count: params.count,
-        });
+        clearPracticeData();
       }
     },
+  });
+};
+
+const clearPracticeData = async () => {
+  try {
+    if (params.categoryId) {
+      await clearAnswerHistory({ categoryId: params.categoryId });
+    }
+  } catch (err) {
+    console.warn('clear remote history failed', err);
+  }
+  clearProgressStorage();
+  closeAnswerCard();
+  loadSession({
+    categoryId: params.categoryId,
+    mode: params.mode,
+    count: params.count,
   });
 };
 

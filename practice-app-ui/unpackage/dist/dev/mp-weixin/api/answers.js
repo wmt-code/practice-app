@@ -56,6 +56,17 @@ async function fetchAnswerHistory({ page = 1, size = 10, categoryId } = {}) {
     records
   };
 }
+async function clearAnswerHistory({ categoryId }) {
+  if (!categoryId) {
+    throw new Error("缺少分类 ID");
+  }
+  await api_http.request({
+    url: `/answers/history/${categoryId}`,
+    method: "DELETE"
+  });
+  return true;
+}
+exports.clearAnswerHistory = clearAnswerHistory;
 exports.fetchAnswerHistory = fetchAnswerHistory;
 exports.submitAnswer = submitAnswer;
 //# sourceMappingURL=../../.sourcemap/mp-weixin/api/answers.js.map

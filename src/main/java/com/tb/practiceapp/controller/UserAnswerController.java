@@ -10,7 +10,9 @@ import com.tb.practiceapp.model.vo.answer.AnswerResultVO;
 import com.tb.practiceapp.service.IUserAnswerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -35,5 +37,11 @@ public class UserAnswerController {
                                                               @RequestParam(defaultValue = "10") long size,
                                                               @RequestParam(required = false) Long categoryId) {
         return ApiResponse.ok(userAnswerService.history(AuthUtils.currentUserId(), categoryId, page, size));
+    }
+
+    @DeleteMapping("/history/{categoryId}")
+    public ApiResponse<Void> clearHistory(@PathVariable Long categoryId) {
+        userAnswerService.clearCategoryHistory(AuthUtils.currentUserId(), categoryId);
+        return ApiResponse.ok();
     }
 }

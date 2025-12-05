@@ -61,6 +61,17 @@ export async function fetchAnswerHistory({ page = 1, size = 10, categoryId } = {
   };
 }
 
+export async function clearAnswerHistory({ categoryId }) {
+  if (!categoryId) {
+    throw new Error('缺少分类 ID');
+  }
+  await request({
+    url: `/answers/history/${categoryId}`,
+    method: 'DELETE',
+  });
+  return true;
+}
+
 export async function fetchRetryQuestions(ids) {
   const res = await request({
     url: '/user-wrong-answers/retry',

@@ -93,6 +93,16 @@ public class UserAnswerServiceImpl extends ServiceImpl<UserAnswerMapper, UserAns
         return new PageResponse<>(answerPage.getCurrent(), answerPage.getSize(), answerPage.getTotal(), items);
     }
 
+    @Override
+    public void clearCategoryHistory(Long userId, Long categoryId) {
+        if (categoryId == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "分类ID不能为空");
+        }
+        this.remove(new LambdaQueryWrapper<UserAnswer>()
+                .eq(UserAnswer::getUserId, userId)
+                .eq(UserAnswer::getCategoryId, categoryId));
+    }
+
     private AnswerResultVO buildResultVO(Question question, List<String> userAnswersRaw, List<String> correctAnswers, boolean correct, int timeSpent, LocalDateTime answeredAt) {
         AnswerResultVO vo = new AnswerResultVO();
         vo.setQuestionId(question.getId());

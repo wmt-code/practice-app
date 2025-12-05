@@ -20,4 +20,9 @@ public interface IUserAnswerService extends IService<UserAnswer> {
     AnswerResultVO submitAnswer(Long userId, AnswerSubmitDTO request);
 
     PageResponse<AnswerHistoryVO> history(Long userId, Long categoryId, long page, long size);
+
+    /**
+     * 清空用户在指定分类下的答题记录
+     */
+    void clearCategoryHistory(Long userId, Long categoryId);
 }

@@ -508,15 +508,25 @@ const _sfc_main = {
         content: "确定清空当前答题记录并重新开始吗？",
         success: (res) => {
           if (res.confirm) {
-            clearProgressStorage();
-            closeAnswerCard();
-            loadSession({
-              categoryId: params.categoryId,
-              mode: params.mode,
-              count: params.count
-            });
+            clearPracticeData();
           }
         }
+      });
+    };
+    const clearPracticeData = async () => {
+      try {
+        if (params.categoryId) {
+          await api_answers.clearAnswerHistory({ categoryId: params.categoryId });
+        }
+      } catch (err) {
+        common_vendor.index.__f__("warn", "at pages/questions/practice.vue:700", "clear remote history failed", err);
+      }
+      clearProgressStorage();
+      closeAnswerCard();
+      loadSession({
+        categoryId: params.categoryId,
+        mode: params.mode,
+        count: params.count
       });
     };
     common_vendor.watch(currentQuestionId, (id) => {
