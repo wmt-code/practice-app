@@ -6,7 +6,7 @@
         <text class="name">{{ category.name }}</text>
         <uni-tag text="题库" type="primary" size="mini" />
       </view>
-      <view class="hero-desc">{{ category.description || '进入本分类，开始专项练习' }}</view>
+      <view v-if="category.description" class="hero-desc">{{ category.description }}</view>
       <view class="hero-meta">
         <text class="muted">题量 {{ summary.total }}</text>
         <text class="muted">已做 {{ summary.answered }}</text>

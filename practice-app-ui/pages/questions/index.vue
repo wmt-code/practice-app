@@ -49,10 +49,6 @@
               <uni-icons type="arrowright" color="#9ca3af" size="20" />
             </view>
             <view class="desc">{{ renderDesc(item) }}</view>
-            <view class="meta-row">
-              <text class="muted">题量 {{ item.questionCount || 0 }}</text>
-              <text class="muted">已做 {{ item.finishedCount || 0 }}</text>
-            </view>
           </view>
         </view>
         <view v-else class="empty">
@@ -171,7 +167,6 @@ const goCategory = async (item) => {
 const renderDesc = (item) => {
   if (item.description) return item.description;
   if (item.badgeText) return item.badgeText;
-  return `共 ${item.questionCount || 0} 题`;
 };
 
 onShow(() => {

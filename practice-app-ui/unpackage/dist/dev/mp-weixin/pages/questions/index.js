@@ -104,7 +104,7 @@ const _sfc_main = {
       try {
         await navigateWithFallback(url, { timeout: 1200 });
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/index.vue:164", "navigate to category failed", err);
+        common_vendor.index.__f__("error", "at pages/questions/index.vue:160", "navigate to category failed", err);
         common_vendor.index.showToast({ title: "打开分类失败，请重试", icon: "none" });
       } finally {
         navigating.value = false;
@@ -115,7 +115,6 @@ const _sfc_main = {
         return item.description;
       if (item.badgeText)
         return item.badgeText;
-      return `共 ${item.questionCount || 0} 题`;
     };
     common_vendor.onShow(() => {
       loadCategories();
@@ -159,10 +158,8 @@ const _sfc_main = {
           } : {}, {
             e: "29918ac5-2-" + i0,
             f: common_vendor.t(renderDesc(item)),
-            g: common_vendor.t(item.questionCount || 0),
-            h: common_vendor.t(item.finishedCount || 0),
-            i: item.id,
-            j: common_vendor.o(($event) => goCategory(item), item.id)
+            g: item.id,
+            h: common_vendor.o(($event) => goCategory(item), item.id)
           });
         }),
         h: common_vendor.p({

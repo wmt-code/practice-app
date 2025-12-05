@@ -178,7 +178,7 @@ const _sfc_main = {
     return (_ctx, _cache) => {
       return common_vendor.e({
         a: category.value
-      }, category.value ? {
+      }, category.value ? common_vendor.e({
         b: common_vendor.t(parentName.value),
         c: common_vendor.t(category.value.name),
         d: common_vendor.p({
@@ -186,48 +186,51 @@ const _sfc_main = {
           type: "primary",
           size: "mini"
         }),
-        e: common_vendor.t(category.value.description || "进入本分类，开始专项练习"),
-        f: common_vendor.t(summary.value.total),
-        g: common_vendor.t(summary.value.answered),
-        h: common_vendor.t(category.value.updatedAt || "--")
+        e: category.value.description
+      }, category.value.description ? {
+        f: common_vendor.t(category.value.description)
       } : {}, {
-        i: loading.value
+        g: common_vendor.t(summary.value.total),
+        h: common_vendor.t(summary.value.answered),
+        i: common_vendor.t(category.value.updatedAt || "--")
+      }) : {}, {
+        j: loading.value
       }, loading.value ? {
-        j: common_vendor.p({
+        k: common_vendor.p({
           status: "loading",
           iconType: "circle"
         })
       } : {
-        k: common_vendor.p({
+        l: common_vendor.p({
           type: "redo",
           size: "22",
           color: "#fff"
         }),
-        l: common_vendor.t(summary.value.total),
-        m: common_vendor.t(summary.value.answered),
-        n: !summary.value.total || loading.value || navigating.value,
-        o: loading.value || navigating.value,
-        p: common_vendor.o(startOrder),
+        m: common_vendor.t(summary.value.total),
+        n: common_vendor.t(summary.value.answered),
+        o: !summary.value.total || loading.value || navigating.value,
+        p: loading.value || navigating.value,
         q: common_vendor.o(startOrder),
-        r: common_vendor.p({
+        r: common_vendor.o(startOrder),
+        s: common_vendor.p({
           type: "hand-up",
           size: "22",
           color: "#111827"
         }),
-        s: common_vendor.o(common_vendor.m(($event) => customCount.value = $event, {
+        t: common_vendor.o(common_vendor.m(($event) => customCount.value = $event, {
           number: true
         }, true)),
-        t: common_vendor.p({
+        v: common_vendor.p({
           type: "number",
           placeholder: "输入数量",
           clearable: false,
           inputBorder: true,
           modelValue: customCount.value
         }),
-        v: common_vendor.t(summary.value.total),
-        w: !summary.value.total || loading.value || navigating.value,
-        x: loading.value || navigating.value,
-        y: common_vendor.o(startRandom)
+        w: common_vendor.t(summary.value.total),
+        x: !summary.value.total || loading.value || navigating.value,
+        y: loading.value || navigating.value,
+        z: common_vendor.o(startRandom)
       });
     };
   }
