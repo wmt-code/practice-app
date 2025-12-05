@@ -47,6 +47,7 @@ public class UserAnswerServiceImpl extends ServiceImpl<UserAnswerMapper, UserAns
         UserAnswer answer = new UserAnswer();
         answer.setUserId(userId);
         answer.setQuestionId(question.getId());
+        answer.setCategoryId(question.getCategoryId());
         answer.setUserAnswer(String.join(",", request.getUserAnswerValues()));
         answer.setCorrect(correct ? 1 : 0);
         answer.setTimeSpent(request.getTimeSpent() == null ? 0 : request.getTimeSpent());
@@ -58,11 +59,14 @@ public class UserAnswerServiceImpl extends ServiceImpl<UserAnswerMapper, UserAns
     }
 
     @Override
-    public PageResponse<AnswerHistoryVO> history(Long userId, long page, long size) {
-        Page<UserAnswer> answerPage = this.page(new Page<>(page, size),
-                new LambdaQueryWrapper<UserAnswer>()
-                        .eq(UserAnswer::getUserId, userId)
-                        .orderByDesc(UserAnswer::getAnsweredAt));
+    public PageResponse<AnswerHistoryVO> history(Long userId, Long categoryId, long page, long size) {
+        LambdaQueryWrapper<UserAnswer> wrapper = new LambdaQueryWrapper<UserAnswer>()
+                .eq(UserAnswer::getUserId, userId)
+                .orderByDesc(UserAnswer::getAnsweredAt);
+        if (categoryId != null) {
+            wrapper.eq(UserAnswer::getCategoryId, categoryId);
+        }
+        Page<UserAnswer> answerPage = this.page(new Page<>(page, size), wrapper);
         List<Long> questionIds = answerPage.getRecords().stream().map(UserAnswer::getQuestionId).toList();
         Map<Long, Question> questionMap = questionIds.isEmpty()
                 ? Collections.emptyMap()
@@ -73,9 +77,11 @@ public class UserAnswerServiceImpl extends ServiceImpl<UserAnswerMapper, UserAns
                     Question q = questionMap.get(record.getQuestionId());
                     AnswerHistoryVO vo = new AnswerHistoryVO();
                     vo.setQuestionId(record.getQuestionId());
+                    vo.setCategoryId(record.getCategoryId());
                     vo.setQuestionTitle(q != null ? q.getTitle() : "");
                     boolean isCorrect = record.getCorrect() != null && record.getCorrect() == 1;
                     vo.setCorrect(isCorrect);
+                    vo.setUserAnswer(record.getUserAnswer());
                     vo.setScore(q != null ? (isCorrect ? q.getScore() : 0) : 0);
                     vo.setTimeSpent(record.getTimeSpent());
                     vo.setDifficulty(q != null ? q.getDifficulty() : "");

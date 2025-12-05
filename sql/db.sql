@@ -49,6 +49,7 @@ CREATE TABLE `user_answer` (
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `user_id` BIGINT UNSIGNED NOT NULL,
     `question_id` BIGINT UNSIGNED NOT NULL,
+    `category_id` BIGINT UNSIGNED,
     `user_answer` TEXT NOT NULL,
     `correct` TINYINT NOT NULL DEFAULT 0,
     `time_spent` INT NOT NULL,

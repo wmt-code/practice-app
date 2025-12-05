@@ -33,6 +33,8 @@ public class UserAnswer implements Serializable {
 
     private Long questionId;
 
+    private Long categoryId;
+
     private String userAnswer;
 
     private Integer correct;

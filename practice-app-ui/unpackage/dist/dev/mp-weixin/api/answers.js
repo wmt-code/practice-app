@@ -27,17 +27,23 @@ async function submitAnswer({ questionId, chosen = [], timeSpent = 0 }) {
     difficulty: res == null ? void 0 : res.difficulty
   };
 }
-async function fetchAnswerHistory({ page = 1, size = 10 } = {}) {
+async function fetchAnswerHistory({ page = 1, size = 10, categoryId } = {}) {
+  const query = { page, size };
+  if (categoryId !== void 0 && categoryId !== null && categoryId !== "") {
+    query.categoryId = categoryId;
+  }
   const res = await api_http.request({
     url: "/answers/history",
     method: "GET",
-    data: { page, size }
+    data: query
   });
   const records = Array.isArray(res == null ? void 0 : res.records) ? res.records.map((item) => ({
     questionId: item.questionId,
+    categoryId: item.categoryId,
     questionTitle: item.questionTitle,
     correct: item.correct === true,
     isCorrect: item.correct === true,
+    userAnswer: item.userAnswer,
     score: item.score || 0,
     timeSpent: item.timeSpent || 0,
     difficulty: item.difficulty,

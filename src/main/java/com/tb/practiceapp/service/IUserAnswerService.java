@@ -19,5 +19,5 @@ public interface IUserAnswerService extends IService<UserAnswer> {
 
     AnswerResultVO submitAnswer(Long userId, AnswerSubmitDTO request);
 
-    PageResponse<AnswerHistoryVO> history(Long userId, long page, long size);
+    PageResponse<AnswerHistoryVO> history(Long userId, Long categoryId, long page, long size);
 }

@@ -77,6 +77,64 @@ const _sfc_main = {
         return 0;
       return Math.min(100, Math.round((currentIndex.value + 1) / session.total * 100));
     });
+    const normalizeAnswerList = (val) => {
+      if (!val)
+        return [];
+      if (Array.isArray(val))
+        return val.map((v) => `${v}`);
+      if (typeof val === "string")
+        return val.split(/[,;\s]+/).filter(Boolean);
+      return [];
+    };
+    const hydrateFromRemote = async () => {
+      const ids = questions.value.map((q) => q.id);
+      if (!ids.length)
+        return;
+      try {
+        const res = await api_answers.fetchAnswerHistory({ page: 1, size: 500, categoryId: params.categoryId });
+        const list = Array.isArray(res == null ? void 0 : res.records) ? res.records : [];
+        if (!list.length)
+          return;
+        const idSet = new Set(ids.map((id) => `${id}`));
+        stats.correct = 0;
+        stats.wrong = 0;
+        for (const item of list.filter((i) => idSet.has(`${i.questionId}`))) {
+          const key = item.questionId;
+          const isCorrect = item.isCorrect === true || item.correct === true;
+          const userAns = normalizeAnswerList(item.userAnswer || item.userAnswerValues);
+          answers[key] = userAns;
+          let correctAnswer = normalizeAnswerList(item.correctAnswer || item.answer);
+          let explanation = item.explanation || "暂无解析";
+          if (!correctAnswer.length || !explanation || explanation === "暂无解析") {
+            try {
+              const detail = await api_questions.fetchQuestionDetail(key);
+              if (detail) {
+                if (!correctAnswer.length)
+                  correctAnswer = normalizeAnswerList(detail.answer);
+                if (!explanation || explanation === "暂无解析")
+                  explanation = detail.explanation || "暂无解析";
+              }
+            } catch (err) {
+              common_vendor.index.__f__("warn", "at pages/questions/practice.vue:289", "detail fetch fail", key, err);
+            }
+          }
+          feedback[key] = {
+            isCorrect,
+            correct: isCorrect,
+            correctAnswer,
+            explanation
+          };
+          if (isCorrect) {
+            stats.correct += 1;
+          } else {
+            stats.wrong += 1;
+          }
+        }
+        saveProgress();
+      } catch (err) {
+        common_vendor.index.__f__("warn", "at pages/questions/practice.vue:306", "hydrate from remote failed", err);
+      }
+    };
     const questionStatuses = common_vendor.computed(
       () => questions.value.map((q, idx) => {
         const fb = feedback[q.id];
@@ -139,7 +197,7 @@ const _sfc_main = {
         session.category = current || null;
         session.parent = parent || null;
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:320", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:373", err);
       }
     };
     const initFavorites = async () => {
@@ -149,7 +207,7 @@ const _sfc_main = {
           favoriteMap[item.questionId] = true;
         });
       } catch (err) {
-        common_vendor.index.__f__("warn", "at pages/questions/practice.vue:331", "fetch favorites failed, skip", err);
+        common_vendor.index.__f__("warn", "at pages/questions/practice.vue:384", "fetch favorites failed, skip", err);
       }
     };
     const initAnswers = () => {
@@ -171,7 +229,7 @@ const _sfc_main = {
             q.score = q.score || detail.score;
           }
         } catch (err) {
-          common_vendor.index.__f__("warn", "at pages/questions/practice.vue:355", "backfill options failed", q.id, err);
+          common_vendor.index.__f__("warn", "at pages/questions/practice.vue:408", "backfill options failed", q.id, err);
         }
       }
       initAnswers();
@@ -210,7 +268,7 @@ const _sfc_main = {
         initAnswers();
         await backfillOptions(list);
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:398", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:451", err);
         common_vendor.index.showToast({ title: "加载题目失败", icon: "none" });
       } finally {
         pagination.loading = false;
@@ -226,6 +284,7 @@ const _sfc_main = {
         stats.correct = 0;
         stats.wrong = 0;
         resultShown.value = false;
+        currentIndex.value = 0;
         pagination.page = 1;
         pagination.size = 10;
         pagination.total = 0;
@@ -241,10 +300,11 @@ const _sfc_main = {
         const categoryPromise = loadCategoryInfo(params.categoryId);
         const questionPromise = params.mode === "random" ? loadRandom() : loadSequencePage(1, false);
         await Promise.all([categoryPromise, questionPromise]);
-        (_a = favoritesPromise == null ? void 0 : favoritesPromise.catch) == null ? void 0 : _a.call(favoritesPromise, (err) => common_vendor.index.__f__("warn", "at pages/questions/practice.vue:430", "favorites init failed", err));
-        currentIndex.value = 0;
+        await hydrateFromRemote();
+        restoreProgress();
+        (_a = favoritesPromise == null ? void 0 : favoritesPromise.catch) == null ? void 0 : _a.call(favoritesPromise, (err) => common_vendor.index.__f__("warn", "at pages/questions/practice.vue:486", "favorites init failed", err));
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:433", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:488", err);
         common_vendor.index.showToast({ title: err.message || "加载失败", icon: "none" });
       } finally {
         loading.value = false;
@@ -273,6 +333,65 @@ const _sfc_main = {
         openResultSummary();
       }
     };
+    const getProgressKey = () => {
+      if (!params.categoryId)
+        return "";
+      return `practice-progress-${params.mode}-${params.categoryId}`;
+    };
+    const saveProgress = () => {
+      const key = getProgressKey();
+      if (!key || !session.total)
+        return;
+      const payload = {
+        answers: JSON.parse(JSON.stringify(answers)),
+        feedback: JSON.parse(JSON.stringify(feedback)),
+        stats: { correct: stats.correct, wrong: stats.wrong },
+        currentIndex: currentIndex.value,
+        questionIds: questions.value.map((q) => q.id),
+        total: session.total
+      };
+      try {
+        common_vendor.index.setStorageSync(key, payload);
+      } catch (err) {
+        common_vendor.index.__f__("warn", "at pages/questions/practice.vue:536", "save progress failed", err);
+      }
+    };
+    const restoreProgress = () => {
+      var _a, _b;
+      const key = getProgressKey();
+      if (!key)
+        return;
+      try {
+        const saved = common_vendor.index.getStorageSync(key);
+        if (!saved || !Array.isArray(saved.questionIds))
+          return;
+        const ids = questions.value.map((q) => q.id);
+        const sameList = ids.length === saved.questionIds.length && ids.every((id, idx) => `${id}` === `${saved.questionIds[idx]}`);
+        if (!sameList)
+          return;
+        Object.keys(saved.answers || {}).forEach((k) => {
+          answers[k] = saved.answers[k];
+        });
+        Object.keys(saved.feedback || {}).forEach((k) => {
+          feedback[k] = saved.feedback[k];
+        });
+        stats.correct = ((_a = saved.stats) == null ? void 0 : _a.correct) || 0;
+        stats.wrong = ((_b = saved.stats) == null ? void 0 : _b.wrong) || 0;
+        currentIndex.value = saved.currentIndex || 0;
+      } catch (err) {
+        common_vendor.index.__f__("warn", "at pages/questions/practice.vue:561", "restore progress failed", err);
+      }
+    };
+    const clearProgressStorage = () => {
+      const key = getProgressKey();
+      if (!key)
+        return;
+      try {
+        common_vendor.index.removeStorageSync(key);
+      } catch (err) {
+        common_vendor.index.__f__("warn", "at pages/questions/practice.vue:571", "clear progress failed", err);
+      }
+    };
     const submitAnswer = async () => {
       const question = questions.value[currentIndex.value];
       if (!question)
@@ -293,6 +412,7 @@ const _sfc_main = {
         });
         feedback[question.id] = res;
         updateStats(res.isCorrect);
+        saveProgress();
         if (res.isCorrect) {
           common_vendor.index.showToast({ title: "正确，自动跳转", icon: "success" });
           setTimeout(() => goNext(true), 500);
@@ -301,7 +421,7 @@ const _sfc_main = {
         }
         maybeShowResult();
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:488", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:602", err);
         common_vendor.index.showToast({ title: "提交失败：" + err.message, icon: "none" });
       } finally {
         submitting.value = false;
@@ -349,7 +469,7 @@ const _sfc_main = {
           common_vendor.index.showToast({ title: "已收藏", icon: "success" });
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:537", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:651", err);
         common_vendor.index.showToast({ title: err.message || "操作失败", icon: "none" });
       }
     };
@@ -383,11 +503,20 @@ const _sfc_main = {
       closeAnswerCard();
     };
     const resetPractice = () => {
-      closeAnswerCard();
-      loadSession({
-        categoryId: params.categoryId,
-        mode: params.mode,
-        count: params.count
+      common_vendor.index.showModal({
+        title: "重新练习",
+        content: "确定清空当前答题记录并重新开始吗？",
+        success: (res) => {
+          if (res.confirm) {
+            clearProgressStorage();
+            closeAnswerCard();
+            loadSession({
+              categoryId: params.categoryId,
+              mode: params.mode,
+              count: params.count
+            });
+          }
+        }
       });
     };
     common_vendor.watch(currentQuestionId, (id) => {

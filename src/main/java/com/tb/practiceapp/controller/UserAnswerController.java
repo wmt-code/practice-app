@@ -32,7 +32,8 @@ public class UserAnswerController {
 
     @GetMapping("/history")
     public ApiResponse<PageResponse<AnswerHistoryVO>> history(@RequestParam(defaultValue = "1") long page,
-                                                              @RequestParam(defaultValue = "10") long size) {
-        return ApiResponse.ok(userAnswerService.history(AuthUtils.currentUserId(), page, size));
+                                                              @RequestParam(defaultValue = "10") long size,
+                                                              @RequestParam(required = false) Long categoryId) {
+        return ApiResponse.ok(userAnswerService.history(AuthUtils.currentUserId(), categoryId, page, size));
     }
 }

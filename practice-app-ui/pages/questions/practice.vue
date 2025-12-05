@@ -200,7 +200,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { fetchPracticeRandom, fetchPracticeSequence, fetchQuestionDetail } from '@/api/questions.js';
-import { submitAnswer as submitAnswerApi } from '@/api/answers.js';
+import { submitAnswer as submitAnswerApi, fetchAnswerHistory } from '@/api/answers.js';
 import { fetchCategoryTree, flattenCategoryTree } from '@/api/categories.js';
 import { addFavorite, removeFavorite, fetchFavorites } from '@/api/favorites.js';
 
@@ -253,6 +253,59 @@ const progressPercent = computed(() => {
   if (!session.total) return 0;
   return Math.min(100, Math.round(((currentIndex.value + 1) / session.total) * 100));
 });
+
+const normalizeAnswerList = (val) => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val.map((v) => `${v}`);
+  if (typeof val === 'string') return val.split(/[,;\s]+/).filter(Boolean);
+  return [];
+};
+
+const hydrateFromRemote = async () => {
+  const ids = questions.value.map((q) => q.id);
+  if (!ids.length) return;
+  try {
+    const res = await fetchAnswerHistory({ page: 1, size: 500, categoryId: params.categoryId });
+    const list = Array.isArray(res?.records) ? res.records : [];
+    if (!list.length) return;
+    const idSet = new Set(ids.map((id) => `${id}`));
+    stats.correct = 0;
+    stats.wrong = 0;
+    for (const item of list.filter((i) => idSet.has(`${i.questionId}`))) {
+      const key = item.questionId;
+      const isCorrect = item.isCorrect === true || item.correct === true;
+      const userAns = normalizeAnswerList(item.userAnswer || item.userAnswerValues);
+      answers[key] = userAns;
+      let correctAnswer = normalizeAnswerList(item.correctAnswer || item.answer);
+      let explanation = item.explanation || '暂无解析';
+      if (!correctAnswer.length || !explanation || explanation === '暂无解析') {
+        try {
+          const detail = await fetchQuestionDetail(key);
+          if (detail) {
+            if (!correctAnswer.length) correctAnswer = normalizeAnswerList(detail.answer);
+            if (!explanation || explanation === '暂无解析') explanation = detail.explanation || '暂无解析';
+          }
+        } catch (err) {
+          console.warn('detail fetch fail', key, err);
+        }
+      }
+      feedback[key] = {
+        isCorrect,
+        correct: isCorrect,
+        correctAnswer,
+        explanation,
+      };
+      if (isCorrect) {
+        stats.correct += 1;
+      } else {
+        stats.wrong += 1;
+      }
+    }
+    saveProgress();
+  } catch (err) {
+    console.warn('hydrate from remote failed', err);
+  }
+};
 const questionStatuses = computed(() =>
   questions.value.map((q, idx) => {
     const fb = feedback[q.id];
@@ -411,6 +464,7 @@ const loadSession = async (options) => {
     stats.correct = 0;
     stats.wrong = 0;
     resultShown.value = false;
+    currentIndex.value = 0;
     pagination.page = 1;
     pagination.size = 10;
     pagination.total = 0;
@@ -427,8 +481,9 @@ const loadSession = async (options) => {
     const questionPromise =
       params.mode === 'random' ? loadRandom() : loadSequencePage(1, false);
     await Promise.all([categoryPromise, questionPromise]);
+    await hydrateFromRemote();
+    restoreProgress();
     favoritesPromise?.catch?.((err) => console.warn('favorites init failed', err));
-    currentIndex.value = 0;
   } catch (err) {
     console.error(err);
     uni.showToast({ title: err.message || '加载失败', icon: 'none' });
@@ -459,6 +514,64 @@ const maybeShowResult = () => {
   }
 };
 
+const getProgressKey = () => {
+  if (!params.categoryId) return '';
+  return `practice-progress-${params.mode}-${params.categoryId}`;
+};
+
+const saveProgress = () => {
+  const key = getProgressKey();
+  if (!key || !session.total) return;
+  const payload = {
+    answers: JSON.parse(JSON.stringify(answers)),
+    feedback: JSON.parse(JSON.stringify(feedback)),
+    stats: { correct: stats.correct, wrong: stats.wrong },
+    currentIndex: currentIndex.value,
+    questionIds: questions.value.map((q) => q.id),
+    total: session.total,
+  };
+  try {
+    uni.setStorageSync(key, payload);
+  } catch (err) {
+    console.warn('save progress failed', err);
+  }
+};
+
+const restoreProgress = () => {
+  const key = getProgressKey();
+  if (!key) return;
+  try {
+    const saved = uni.getStorageSync(key);
+    if (!saved || !Array.isArray(saved.questionIds)) return;
+    const ids = questions.value.map((q) => q.id);
+    const sameList =
+      ids.length === saved.questionIds.length &&
+      ids.every((id, idx) => `${id}` === `${saved.questionIds[idx]}`);
+    if (!sameList) return;
+    Object.keys(saved.answers || {}).forEach((k) => {
+      answers[k] = saved.answers[k];
+    });
+    Object.keys(saved.feedback || {}).forEach((k) => {
+      feedback[k] = saved.feedback[k];
+    });
+    stats.correct = saved.stats?.correct || 0;
+    stats.wrong = saved.stats?.wrong || 0;
+    currentIndex.value = saved.currentIndex || 0;
+  } catch (err) {
+    console.warn('restore progress failed', err);
+  }
+};
+
+const clearProgressStorage = () => {
+  const key = getProgressKey();
+  if (!key) return;
+  try {
+    uni.removeStorageSync(key);
+  } catch (err) {
+    console.warn('clear progress failed', err);
+  }
+};
+
 const submitAnswer = async () => {
   const question = questions.value[currentIndex.value];
   if (!question) return;
@@ -477,6 +590,7 @@ const submitAnswer = async () => {
     });
     feedback[question.id] = res;
     updateStats(res.isCorrect);
+    saveProgress();
     if (res.isCorrect) {
       uni.showToast({ title: '正确，自动跳转', icon: 'success' });
       setTimeout(() => goNext(true), 500);
@@ -566,11 +680,20 @@ const jumpTo = (idx) => {
 };
 
 const resetPractice = () => {
-  closeAnswerCard();
-  loadSession({
-    categoryId: params.categoryId,
-    mode: params.mode,
-    count: params.count,
+  uni.showModal({
+    title: '重新练习',
+    content: '确定清空当前答题记录并重新开始吗？',
+    success: (res) => {
+      if (res.confirm) {
+        clearProgressStorage();
+        closeAnswerCard();
+        loadSession({
+          categoryId: params.categoryId,
+          mode: params.mode,
+          count: params.count,
+        });
+      }
+    },
   });
 };
 
