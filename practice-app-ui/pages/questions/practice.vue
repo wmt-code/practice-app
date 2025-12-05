@@ -1,25 +1,5 @@
 <template>
   <view class="page">
-    <view class="top-bar">
-      <view class="nav-left">
-        <button class="icon-btn" size="mini" plain @tap="goBack">
-          <uni-icons type="back" size="18" color="#111827" />
-        </button>
-        <button class="icon-btn" size="mini" plain @tap="refreshCurrent">
-          <uni-icons type="refresh" size="18" color="#111827" />
-        </button>
-      </view>
-      <view class="mode-tabs">
-        <view class="mode-tab active">答题</view>
-        <view class="mode-tab">背题</view>
-        <view class="mode-tab">语音</view>
-      </view>
-      <view class="nav-right">
-        <uni-icons type="chat" size="20" color="#111827" />
-        <uni-icons type="more" size="20" color="#111827" />
-      </view>
-    </view>
-
     <view class="meta-row">
       <view class="meta-left">
         <view class="meta-dot"></view>
@@ -571,23 +551,6 @@ const openResultSummary = () => {
   });
 };
 
-const goBack = () => {
-  uni.navigateBack({
-    delta: 1,
-    fail: () => {
-      uni.switchTab({ url: '/pages/questions/index' });
-    },
-  });
-};
-
-const refreshCurrent = () => {
-  loadSession({
-    categoryId: params.categoryId,
-    mode: params.mode,
-    count: params.count,
-  });
-};
-
 const openAnswerCard = () => {
   cardPopup.value?.open?.();
 };
@@ -630,48 +593,6 @@ onLoad((options) => {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-}
-
-.top-bar {
-  background: #ffffff;
-  border-radius: 18rpx;
-  padding: 14rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 12rpx 30rpx rgba(31, 56, 88, 0.08);
-}
-
-.nav-left,
-.nav-right {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
-}
-
-.icon-btn {
-  border-radius: 999rpx;
-  background: #f8fafc;
-  border: 2rpx solid #e5e7eb;
-}
-
-.mode-tabs {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-}
-
-.mode-tab {
-  padding: 8rpx 18rpx;
-  border-radius: 999rpx;
-  font-size: 26rpx;
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.mode-tab.active {
-  background: #111827;
-  color: #ffffff;
 }
 
 .meta-row {

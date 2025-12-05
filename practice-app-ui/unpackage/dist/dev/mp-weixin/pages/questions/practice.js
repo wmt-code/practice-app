@@ -5,18 +5,18 @@ const api_answers = require("../../api/answers.js");
 const api_categories = require("../../api/categories.js");
 const api_favorites = require("../../api/favorites.js");
 if (!Array) {
-  const _easycom_uni_icons2 = common_vendor.resolveComponent("uni-icons");
   const _easycom_uni_load_more2 = common_vendor.resolveComponent("uni-load-more");
+  const _easycom_uni_icons2 = common_vendor.resolveComponent("uni-icons");
   const _easycom_uni_fav2 = common_vendor.resolveComponent("uni-fav");
   const _easycom_uni_popup2 = common_vendor.resolveComponent("uni-popup");
-  (_easycom_uni_icons2 + _easycom_uni_load_more2 + _easycom_uni_fav2 + _easycom_uni_popup2)();
+  (_easycom_uni_load_more2 + _easycom_uni_icons2 + _easycom_uni_fav2 + _easycom_uni_popup2)();
 }
-const _easycom_uni_icons = () => "../../uni_modules/uni-icons/components/uni-icons/uni-icons.js";
 const _easycom_uni_load_more = () => "../../uni_modules/uni-load-more/components/uni-load-more/uni-load-more.js";
+const _easycom_uni_icons = () => "../../uni_modules/uni-icons/components/uni-icons/uni-icons.js";
 const _easycom_uni_fav = () => "../../uni_modules/uni-fav/components/uni-fav/uni-fav.js";
 const _easycom_uni_popup = () => "../../uni_modules/uni-popup/components/uni-popup/uni-popup.js";
 if (!Math) {
-  (_easycom_uni_icons + _easycom_uni_load_more + _easycom_uni_fav + _easycom_uni_popup)();
+  (_easycom_uni_load_more + _easycom_uni_icons + _easycom_uni_fav + _easycom_uni_popup)();
 }
 const _sfc_main = {
   __name: "practice",
@@ -139,7 +139,7 @@ const _sfc_main = {
         session.category = current || null;
         session.parent = parent || null;
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:340", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:320", err);
       }
     };
     const initFavorites = async () => {
@@ -149,7 +149,7 @@ const _sfc_main = {
           favoriteMap[item.questionId] = true;
         });
       } catch (err) {
-        common_vendor.index.__f__("warn", "at pages/questions/practice.vue:351", "fetch favorites failed, skip", err);
+        common_vendor.index.__f__("warn", "at pages/questions/practice.vue:331", "fetch favorites failed, skip", err);
       }
     };
     const initAnswers = () => {
@@ -171,7 +171,7 @@ const _sfc_main = {
             q.score = q.score || detail.score;
           }
         } catch (err) {
-          common_vendor.index.__f__("warn", "at pages/questions/practice.vue:375", "backfill options failed", q.id, err);
+          common_vendor.index.__f__("warn", "at pages/questions/practice.vue:355", "backfill options failed", q.id, err);
         }
       }
       initAnswers();
@@ -210,7 +210,7 @@ const _sfc_main = {
         initAnswers();
         await backfillOptions(list);
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:418", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:398", err);
         common_vendor.index.showToast({ title: "加载题目失败", icon: "none" });
       } finally {
         pagination.loading = false;
@@ -241,10 +241,10 @@ const _sfc_main = {
         const categoryPromise = loadCategoryInfo(params.categoryId);
         const questionPromise = params.mode === "random" ? loadRandom() : loadSequencePage(1, false);
         await Promise.all([categoryPromise, questionPromise]);
-        (_a = favoritesPromise == null ? void 0 : favoritesPromise.catch) == null ? void 0 : _a.call(favoritesPromise, (err) => common_vendor.index.__f__("warn", "at pages/questions/practice.vue:450", "favorites init failed", err));
+        (_a = favoritesPromise == null ? void 0 : favoritesPromise.catch) == null ? void 0 : _a.call(favoritesPromise, (err) => common_vendor.index.__f__("warn", "at pages/questions/practice.vue:430", "favorites init failed", err));
         currentIndex.value = 0;
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:453", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:433", err);
         common_vendor.index.showToast({ title: err.message || "加载失败", icon: "none" });
       } finally {
         loading.value = false;
@@ -301,7 +301,7 @@ const _sfc_main = {
         }
         maybeShowResult();
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:508", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:488", err);
         common_vendor.index.showToast({ title: "提交失败：" + err.message, icon: "none" });
       } finally {
         submitting.value = false;
@@ -349,7 +349,7 @@ const _sfc_main = {
           common_vendor.index.showToast({ title: "已收藏", icon: "success" });
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/questions/practice.vue:557", err);
+        common_vendor.index.__f__("error", "at pages/questions/practice.vue:537", err);
         common_vendor.index.showToast({ title: err.message || "操作失败", icon: "none" });
       }
     };
@@ -366,21 +366,6 @@ const _sfc_main = {
 未答：${unanswered}
 正确率：${correctRate}%`,
         showCancel: false
-      });
-    };
-    const goBack = () => {
-      common_vendor.index.navigateBack({
-        delta: 1,
-        fail: () => {
-          common_vendor.index.switchTab({ url: "/pages/questions/index" });
-        }
-      });
-    };
-    const refreshCurrent = () => {
-      loadSession({
-        categoryId: params.categoryId,
-        mode: params.mode,
-        count: params.count
       });
     };
     const openAnswerCard = () => {
@@ -416,40 +401,18 @@ const _sfc_main = {
     return (_ctx, _cache) => {
       var _a, _b, _c;
       return common_vendor.e({
-        a: common_vendor.p({
-          type: "back",
-          size: "18",
-          color: "#111827"
-        }),
-        b: common_vendor.o(goBack),
-        c: common_vendor.p({
-          type: "refresh",
-          size: "18",
-          color: "#111827"
-        }),
-        d: common_vendor.o(refreshCurrent),
-        e: common_vendor.p({
-          type: "chat",
-          size: "20",
-          color: "#111827"
-        }),
-        f: common_vendor.p({
-          type: "more",
-          size: "20",
-          color: "#111827"
-        }),
-        g: common_vendor.t(((_a = session.parent) == null ? void 0 : _a.name) || "题库"),
-        h: common_vendor.t(((_b = session.category) == null ? void 0 : _b.name) || "练习"),
-        i: common_vendor.t(currentIndex.value + 1),
-        j: common_vendor.t(session.total || 0),
-        k: progressPercent.value + "%",
-        l: loading.value
+        a: common_vendor.t(((_a = session.parent) == null ? void 0 : _a.name) || "题库"),
+        b: common_vendor.t(((_b = session.category) == null ? void 0 : _b.name) || "练习"),
+        c: common_vendor.t(currentIndex.value + 1),
+        d: common_vendor.t(session.total || 0),
+        e: progressPercent.value + "%",
+        f: loading.value
       }, loading.value ? {
-        m: common_vendor.p({
+        g: common_vendor.p({
           status: "loading"
         })
       } : !session.total ? {} : {
-        o: common_vendor.f(questions.value, (item, idx, i0) => {
+        i: common_vendor.f(questions.value, (item, idx, i0) => {
           var _a2;
           return common_vendor.e({
             a: common_vendor.t(renderType(item.type)),
@@ -489,14 +452,14 @@ const _sfc_main = {
             n: !currentSelected.value.length || hasAnswered.value,
             o: common_vendor.o(submitAnswer, item.id)
           } : {
-            p: "1e7fffe1-5-" + i0,
+            p: "1e7fffe1-1-" + i0,
             q: common_vendor.p({
               type: "gear",
               size: "18",
               color: "#6b7280"
             })
           }, ((_a2 = currentFeedback.value) == null ? void 0 : _a2.isCorrect) ? {} : {}, currentFeedback.value ? common_vendor.e({
-            r: "1e7fffe1-6-" + i0,
+            r: "1e7fffe1-2-" + i0,
             s: common_vendor.p({
               type: currentFeedback.value.isCorrect ? "checkmarkempty" : "closeempty",
               color: currentFeedback.value.isCorrect ? "#10b981" : "#ef4444",
@@ -511,18 +474,18 @@ const _sfc_main = {
             y: item.id
           });
         }),
-        p: common_vendor.t(session.mode === "random" ? "随机练习" : "顺序练习"),
-        q: requiresManual(currentQuestionType.value),
-        r: (_c = currentFeedback.value) == null ? void 0 : _c.isCorrect,
-        s: currentFeedback.value,
-        t: currentIndex.value,
-        v: common_vendor.o(onSwipe)
+        j: common_vendor.t(session.mode === "random" ? "随机练习" : "顺序练习"),
+        k: requiresManual(currentQuestionType.value),
+        l: (_c = currentFeedback.value) == null ? void 0 : _c.isCorrect,
+        m: currentFeedback.value,
+        n: currentIndex.value,
+        o: common_vendor.o(onSwipe)
       }, {
-        n: !session.total,
-        w: session.total
+        h: !session.total,
+        p: session.total
       }, session.total ? {
-        x: common_vendor.o(toggleFavorite),
-        y: common_vendor.p({
+        q: common_vendor.o(toggleFavorite),
+        r: common_vendor.p({
           checked: isFavorited.value,
           bgColor: "#f1f5f9",
           bgColorChecked: "#111827",
@@ -533,11 +496,11 @@ const _sfc_main = {
             contentFav: "已收藏"
           }
         }),
-        z: common_vendor.t(stats.correct),
-        A: common_vendor.t(stats.wrong),
-        B: common_vendor.o(openAnswerCard)
+        s: common_vendor.t(stats.correct),
+        t: common_vendor.t(stats.wrong),
+        v: common_vendor.o(openAnswerCard)
       } : {}, {
-        C: common_vendor.f(questionStatuses.value, (item, k0, i0) => {
+        w: common_vendor.f(questionStatuses.value, (item, k0, i0) => {
           var _a2;
           return {
             a: common_vendor.t(item.idx + 1),
@@ -547,12 +510,12 @@ const _sfc_main = {
             e: common_vendor.o(($event) => jumpTo(item.idx), item.idx)
           };
         }),
-        D: common_vendor.o(resetPractice),
-        E: common_vendor.o(openResultSummary),
-        F: common_vendor.sr(cardPopup, "1e7fffe1-8", {
+        x: common_vendor.o(resetPractice),
+        y: common_vendor.o(openResultSummary),
+        z: common_vendor.sr(cardPopup, "1e7fffe1-4", {
           "k": "cardPopup"
         }),
-        G: common_vendor.p({
+        A: common_vendor.p({
           type: "bottom",
           ["border-radius"]: "12"
         })
