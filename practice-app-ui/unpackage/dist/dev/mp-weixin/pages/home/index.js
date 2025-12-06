@@ -78,6 +78,30 @@ const _sfc_main = {
     const goProfile = () => {
       common_vendor.index.switchTab({ url: "/pages/profile/index" });
     };
+    const openImportSheet = () => {
+      common_vendor.index.showActionSheet({
+        itemList: ["单题录入", "批量录入", "文件录入"],
+        success: (res) => {
+          if (res.tapIndex === 0)
+            goImport("single");
+          if (res.tapIndex === 1)
+            goImport("batch");
+          if (res.tapIndex === 2)
+            goImport("file");
+        }
+      });
+    };
+    const goImport = (mode) => {
+      if (mode === "batch") {
+        common_vendor.index.navigateTo({ url: "/pages/import-batch/index" });
+        return;
+      }
+      if (mode === "file") {
+        common_vendor.index.navigateTo({ url: "/pages/import-file/index" });
+        return;
+      }
+      common_vendor.index.navigateTo({ url: `/pages/import-question/index?mode=${mode}` });
+    };
     common_vendor.onShow(() => {
       loadData();
     });
@@ -169,7 +193,8 @@ const _sfc_main = {
           });
         })
       } : {}, {
-        s: common_vendor.o(goQuestionBank)
+        s: common_vendor.o(openImportSheet),
+        t: common_vendor.o(goQuestionBank)
       });
     };
   }

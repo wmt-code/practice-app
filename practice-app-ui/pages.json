@@ -7,6 +7,27 @@
       }
     },
     {
+      "path": "pages/import-question/index",
+      "style": {
+        "navigationBarTitleText": "单题编辑录入",
+        "backgroundColor": "#f5f7fb"
+      }
+    },
+    {
+      "path": "pages/import-batch/index",
+      "style": {
+        "navigationBarTitleText": "批量录入",
+        "backgroundColor": "#f5f7fb"
+      }
+    },
+    {
+      "path": "pages/import-file/index",
+      "style": {
+        "navigationBarTitleText": "文件录入",
+        "backgroundColor": "#f5f7fb"
+      }
+    },
+    {
       "path": "pages/questions/index",
       "style": {
         "navigationBarTitleText": "题库"

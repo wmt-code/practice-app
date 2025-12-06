@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <view class="page">
     <uni-card :is-shadow="false" class="hero-card">
       <view class="hero">
@@ -72,6 +72,7 @@
     </view>
 
     <view class="cta">
+      <button class="secondary-btn" @tap="openImportSheet">题库导入</button>
       <button type="primary" class="primary-btn" @tap="goQuestionBank">进入题库</button>
     </view>
   </view>
@@ -152,6 +153,29 @@ const goQuestion = (id) => {
 
 const goProfile = () => {
   uni.switchTab({ url: '/pages/profile/index' });
+};
+
+const openImportSheet = () => {
+  uni.showActionSheet({
+    itemList: ['单题录入', '批量录入', '文件录入'],
+    success: (res) => {
+      if (res.tapIndex === 0) goImport('single');
+      if (res.tapIndex === 1) goImport('batch');
+      if (res.tapIndex === 2) goImport('file');
+    },
+  });
+};
+
+const goImport = (mode) => {
+  if (mode === 'batch') {
+    uni.navigateTo({ url: '/pages/import-batch/index' });
+    return;
+  }
+  if (mode === 'file') {
+    uni.navigateTo({ url: '/pages/import-file/index' });
+    return;
+  }
+  uni.navigateTo({ url: `/pages/import-question/index?mode=${mode}` });
 };
 
 onShow(() => {
@@ -273,12 +297,22 @@ onPullDownRefresh(async () => {
 
 .cta {
   margin: 32rpx 0;
+  display: flex;
+  gap: 16rpx;
 }
 
 .primary-btn {
+  flex: 1;
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: #fff;
   border: none;
+}
+
+.secondary-btn {
+  flex: 1;
+  background: #eef2ff;
+  color: #1f2937;
+  border: 1rpx solid #e0e7ff;
 }
 
 .empty {

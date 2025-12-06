@@ -1,0 +1,1 @@
+{"version":3,"file":"index.js","sources":["D:/HBuilderX.4.85.2025110510/HBuilderX/plugins/uniapp-cli-vite/uniPage:/cGFnZXMvaW1wb3J0LWZpbGUvaW5kZXgudnVl"],"sourcesContent":["import MiniProgramPage from 'E:/project/practice-app/practice-app-ui/pages/import-file/index.vue'\nwx.createPage(MiniProgramPage)"],"names":[],"mappings":";;;;;;;AACA,GAAG,WAAW,eAAe;"}

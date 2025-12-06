@@ -89,11 +89,20 @@
 }
 .cta.data-v-4978fed5 {
   margin: 32rpx 0;
+  display: flex;
+  gap: 16rpx;
 }
 .primary-btn.data-v-4978fed5 {
+  flex: 1;
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: #fff;
   border: none;
+}
+.secondary-btn.data-v-4978fed5 {
+  flex: 1;
+  background: #eef2ff;
+  color: #1f2937;
+  border: 1rpx solid #e0e7ff;
 }
 .empty.data-v-4978fed5 {
   padding: 20rpx;

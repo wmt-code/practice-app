@@ -1,6 +1,9 @@
 {
   "pages": [
     "pages/home/index",
+    "pages/import-question/index",
+    "pages/import-batch/index",
+    "pages/import-file/index",
     "pages/questions/index",
     "pages/questions/category",
     "pages/questions/practice",
