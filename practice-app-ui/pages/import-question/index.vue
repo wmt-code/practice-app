@@ -14,11 +14,11 @@
           <text class="label required">题干</text>
         </view>
         <view class="toolbar" v-if="showStemToolbar">
-          <view class="tool-btn" @tap="handleStemToolbar('bold')"><text style="font-weight: bold;">B</text></view>
-          <view class="tool-btn" @tap="handleStemToolbar('italic')"><text style="font-style: italic;">I</text></view>
-          <view class="tool-btn" @tap="handleStemToolbar('underline')"><text style="text-decoration: underline;">U</text></view>
-          <view class="tool-btn" @tap="handleStemToolbar('sub')">x₂</view>
-          <view class="tool-btn" @tap="handleStemToolbar('sup')">x²</view>
+          <view class="tool-btn" :class="{ active: formats.bold }" @tap="handleStemToolbar('bold')"><text style="font-weight: bold;">B</text></view>
+          <view class="tool-btn" :class="{ active: formats.italic }" @tap="handleStemToolbar('italic')"><text style="font-style: italic;">I</text></view>
+          <view class="tool-btn" :class="{ active: formats.underline }" @tap="handleStemToolbar('underline')"><text style="text-decoration: underline;">U</text></view>
+          <view class="tool-btn" :class="{ active: formats.script === 'sub' }" @tap="handleStemToolbar('script', 'sub')">x₂</view>
+          <view class="tool-btn" :class="{ active: formats.script === 'sup' }" @tap="handleStemToolbar('script', 'sup')">x²</view>
           <uni-icons class="tool-btn" type="image" size="20" @tap="insertImage"></uni-icons>
         </view>
         <view class="editor-box">
@@ -30,6 +30,7 @@
             show-img-toolbar
             show-img-resize
             @ready="onStemReady"
+            @statuschange="onStatusChange"
             @focus="showStemToolbar = true"
             @blur="showStemToolbar = false"
             @input="handleStemInput"
@@ -195,6 +196,7 @@ const showStemToolbar = ref(false);
 const stemEditorCtx = ref(null);
 const bulkPopup = ref(null);
 const bulkText = ref('');
+const formats = ref({});
 
 // 表单数据
 const form = ref({
@@ -281,9 +283,12 @@ function onStemReady(e) {
 function handleStemInput(e) {
   form.value.stemHtml = e.detail.html;
 }
-function handleStemToolbar(action) {
+function onStatusChange(e) {
+  formats.value = e.detail;
+}
+function handleStemToolbar(name, value) {
     if(stemEditorCtx.value) {
-        stemEditorCtx.value.format(action);
+        stemEditorCtx.value.format(name, value);
     }
 }
 function insertImage() {
@@ -506,6 +511,11 @@ function submit() {
     padding: 4rpx 12rpx;
     font-size: 28rpx;
     color: #333;
+    border-radius: 4rpx;
+}
+.tool-btn.active {
+    background-color: #e6f1fc;
+    color: #007aff;
 }
 
 /* 编辑器容器 */

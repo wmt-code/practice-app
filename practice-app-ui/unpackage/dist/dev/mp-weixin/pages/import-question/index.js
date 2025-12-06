@@ -32,6 +32,7 @@ const _sfc_main = {
     const stemEditorCtx = common_vendor.ref(null);
     const bulkPopup = common_vendor.ref(null);
     const bulkText = common_vendor.ref("");
+    const formats = common_vendor.ref({});
     const form = common_vendor.ref({
       type: "SINGLE",
       // SINGLE, MULTIPLE, JUDGE, FILL
@@ -96,9 +97,12 @@ const _sfc_main = {
     function handleStemInput(e) {
       form.value.stemHtml = e.detail.html;
     }
-    function handleStemToolbar(action) {
+    function onStatusChange(e) {
+      formats.value = e.detail;
+    }
+    function handleStemToolbar(name, value) {
       if (stemEditorCtx.value) {
-        stemEditorCtx.value.format(action);
+        stemEditorCtx.value.format(name, value);
       }
     }
     function insertImage() {
@@ -179,7 +183,7 @@ const _sfc_main = {
       return t ? t.text : "";
     }
     function submit() {
-      common_vendor.index.__f__("log", "at pages/import-question/index.vue:383", "Submit:", form.value);
+      common_vendor.index.__f__("log", "at pages/import-question/index.vue:388", "Submit:", form.value);
       if (!form.value.stemHtml && !form.value.stemText) {
         return common_vendor.index.showToast({ title: "请输入题干", icon: "none" });
       }
@@ -199,24 +203,30 @@ const _sfc_main = {
         c: common_vendor.o(openTypeSelect),
         d: showStemToolbar.value
       }, showStemToolbar.value ? {
-        e: common_vendor.o(($event) => handleStemToolbar("bold")),
-        f: common_vendor.o(($event) => handleStemToolbar("italic")),
-        g: common_vendor.o(($event) => handleStemToolbar("underline")),
-        h: common_vendor.o(($event) => handleStemToolbar("sub")),
-        i: common_vendor.o(($event) => handleStemToolbar("sup")),
-        j: common_vendor.o(insertImage),
-        k: common_vendor.p({
+        e: formats.value.bold ? 1 : "",
+        f: common_vendor.o(($event) => handleStemToolbar("bold")),
+        g: formats.value.italic ? 1 : "",
+        h: common_vendor.o(($event) => handleStemToolbar("italic")),
+        i: formats.value.underline ? 1 : "",
+        j: common_vendor.o(($event) => handleStemToolbar("underline")),
+        k: formats.value.script === "sub" ? 1 : "",
+        l: common_vendor.o(($event) => handleStemToolbar("script", "sub")),
+        m: formats.value.script === "sup" ? 1 : "",
+        n: common_vendor.o(($event) => handleStemToolbar("script", "sup")),
+        o: common_vendor.o(insertImage),
+        p: common_vendor.p({
           type: "image",
           size: "20"
         })
       } : {}, {
-        l: common_vendor.o(onStemReady),
-        m: common_vendor.o(($event) => showStemToolbar.value = true),
-        n: common_vendor.o(($event) => showStemToolbar.value = false),
-        o: common_vendor.o(handleStemInput),
-        p: isChoice.value
+        q: common_vendor.o(onStemReady),
+        r: common_vendor.o(onStatusChange),
+        s: common_vendor.o(($event) => showStemToolbar.value = true),
+        t: common_vendor.o(($event) => showStemToolbar.value = false),
+        v: common_vendor.o(handleStemInput),
+        w: isChoice.value
       }, isChoice.value ? {
-        q: common_vendor.f(form.value.options, (item, index, i0) => {
+        x: common_vendor.f(form.value.options, (item, index, i0) => {
           return common_vendor.e(canRemoveOption.value ? {
             a: "3e7c1569-2-" + i0,
             b: common_vendor.p({
@@ -242,23 +252,23 @@ const _sfc_main = {
             l: item.label
           });
         }),
-        r: canRemoveOption.value,
-        s: common_vendor.p({
+        y: canRemoveOption.value,
+        z: common_vendor.p({
           type: "plus-filled",
           color: "#007aff",
           size: "22"
         }),
-        t: common_vendor.o(addOption),
-        v: optionsDisabled.value ? 1 : "",
-        w: common_vendor.o(openBulkPopup)
+        A: common_vendor.o(addOption),
+        B: optionsDisabled.value ? 1 : "",
+        C: common_vendor.o(openBulkPopup)
       } : form.value.type === "FILL" ? {
-        y: common_vendor.p({
+        E: common_vendor.p({
           type: "plus-filled",
           color: "#007aff",
           size: "20"
         }),
-        z: common_vendor.o(addBlank),
-        A: common_vendor.f(form.value.blanks, (blank, index, i0) => {
+        F: common_vendor.o(addBlank),
+        G: common_vendor.f(form.value.blanks, (blank, index, i0) => {
           return common_vendor.e(form.value.blanks.length > 1 ? {
             a: "3e7c1569-6-" + i0,
             b: common_vendor.p({
@@ -274,53 +284,53 @@ const _sfc_main = {
             g: blank.id
           });
         }),
-        B: form.value.blanks.length > 1
+        H: form.value.blanks.length > 1
       } : {}, {
-        x: form.value.type === "FILL",
-        C: form.value.analysis,
-        D: common_vendor.o(($event) => form.value.analysis = $event.detail.value),
-        E: common_vendor.p({
+        D: form.value.type === "FILL",
+        I: form.value.analysis,
+        J: common_vendor.o(($event) => form.value.analysis = $event.detail.value),
+        K: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         }),
-        F: common_vendor.o(chooseCategory),
-        G: common_vendor.p({
+        L: common_vendor.o(chooseCategory),
+        M: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         }),
-        H: form.value.difficulty
+        N: form.value.difficulty
       }, form.value.difficulty ? {
-        I: common_vendor.t(renderDifficulty(form.value.difficulty)),
-        J: common_vendor.p({
+        O: common_vendor.t(renderDifficulty(form.value.difficulty)),
+        P: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         })
       } : {
-        K: common_vendor.p({
+        Q: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         })
       }, {
-        L: common_vendor.o(openDifficulty),
-        M: common_vendor.o(submit),
-        N: bulkText.value,
-        O: common_vendor.o(($event) => bulkText.value = $event.detail.value),
-        P: common_vendor.o(applyBulkOptions),
-        Q: common_vendor.o(($event) => bulkPopup.value.close()),
-        R: common_vendor.p({
+        R: common_vendor.o(openDifficulty),
+        S: common_vendor.o(submit),
+        T: bulkText.value,
+        U: common_vendor.o(($event) => bulkText.value = $event.detail.value),
+        V: common_vendor.o(applyBulkOptions),
+        W: common_vendor.o(($event) => bulkPopup.value.close()),
+        X: common_vendor.p({
           mode: "input",
           title: "批量添加选项",
           placeholder: "一行一个选项，自动填充",
           ["before-close"]: true
         }),
-        S: common_vendor.sr(bulkPopup, "3e7c1569-11", {
+        Y: common_vendor.sr(bulkPopup, "3e7c1569-11", {
           "k": "bulkPopup"
         }),
-        T: common_vendor.p({
+        Z: common_vendor.p({
           type: "dialog"
         })
       });

@@ -114,6 +114,11 @@
   padding: 4rpx 12rpx;
   font-size: 28rpx;
   color: #333;
+  border-radius: 4rpx;
+}
+.tool-btn.active.data-v-3e7c1569 {
+  background-color: #e6f1fc;
+  color: #007aff;
 }
 
 /* 编辑器容器 */
