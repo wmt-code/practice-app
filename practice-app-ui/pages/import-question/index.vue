@@ -176,7 +176,9 @@
       <view style="height: 120rpx;"></view> </view>
 
     <view class="footer-bar">
-      <button class="submit-btn" hover-class="btn-hover" @tap="submit">添加试题</button>
+      <button class="submit-btn" hover-class="btn-hover" :loading="saving" :disabled="saving || loading" @tap="submit">
+        {{ submitText }}
+      </button>
     </view>
 
     <uni-popup ref="bulkPopup" type="dialog">
@@ -210,7 +212,7 @@
             <view class="category-item" @tap="selectCategory(cat)">
               <text>{{ cat.name }}</text>
             </view>
-            <view class="sub-category-item" v-for="sub in cat.children" :key="sub.id" @tap="selectCategory(sub)">
+            <view class="sub-category-item" v-for="sub in cat.children || []" :key="sub.id" @tap="selectCategory(sub)">
               <text>{{ sub.name }}</text>
             </view>
           </view>
@@ -249,7 +251,7 @@
               </view>
             </view>
             <view v-if="cat.expanded">
-                <view class="edit-item sub-item" v-for="(sub, subIndex) in cat.children" :key="sub.id">
+                <view class="edit-item sub-item" v-for="(sub, subIndex) in cat.children || []" :key="sub.id">
                 <view class="left-part">
                     <uni-icons type="minus-filled" color="#dd524d" size="24" @tap="removeSubCategory(index, subIndex)" />
                     <text class="ml-10">{{ sub.name }}</text>
@@ -283,6 +285,8 @@
 <script setup>
 import { computed, nextTick, ref, getCurrentInstance } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
+import { fetchCategoryTree, createCategory, updateCategory, deleteCategory } from '@/api/categories.js';
+import { createQuestion, updateQuestion, fetchQuestionRaw, uploadQuestionImage } from '@/api/questions.js';
 
 // 基础数据
 const questionTypes = [
@@ -301,6 +305,9 @@ const difficultyOptions = [
 const instance = getCurrentInstance();
 
 const mode = ref('single');
+const questionId = ref(null);
+const loading = ref(false);
+const saving = ref(false);
 const showStemToolbar = ref(false);
 const stemEditorCtx = ref(null);
 const analysisEditorCtx = ref(null);
@@ -313,33 +320,7 @@ let blurTimer = null;
 
 const categoryPopup = ref(null);
 const editCategoryPopup = ref(null);
-const categories = ref([
-  {
-    id: 1,
-    name: '章节1',
-    expanded: true,
-    children: [
-      { id: 11, name: '子章节1' }
-    ]
-  },
-  {
-    id: 2,
-    name: '章节2',
-    expanded: true,
-    children: [
-      { id: 21, name: '子章节2' }
-    ]
-  },
-  {
-    id: 3,
-    name: '章节3',
-    expanded: true,
-    children: [
-      { id: 31, name: '子章节1' },
-      { id: 32, name: '子章节2' }
-    ]
-  }
-]);
+const categories = ref([]);
 
 // 表单数据
 const form = ref({
@@ -349,6 +330,7 @@ const form = ref({
   answers: [],
   blanks: [{ id: Date.now(), text: '' }],
   analysis: '',
+  categoryId: '',
   categoryName: '',
   difficulty: '', // 截图里默认可能为空
 });
@@ -362,16 +344,57 @@ const isChoice = computed(() => ['SINGLE', 'MULTIPLE', 'JUDGE'].includes(form.va
 const isSingle = computed(() => ['SINGLE', 'JUDGE'].includes(form.value.type));
 const canRemoveOption = computed(() => form.value.options.length > 2 && form.value.type !== 'JUDGE');
 const optionsDisabled = computed(() => form.value.options.length >= 8 || form.value.type === 'JUDGE');
+const submitText = computed(() => (questionId.value ? '保存修改' : '添加试题'));
 
 onLoad((query) => {
   mode.value = query.mode || 'single';
+  if (query.id) {
+    const parsed = Number(query.id);
+    questionId.value = Number.isNaN(parsed) ? query.id : parsed;
+  }
+  initPage();
 });
 
 // 逻辑方法
+async function initPage() {
+  loading.value = true;
+  try {
+    await loadCategories();
+    if (questionId.value) {
+      await loadQuestionDetail(questionId.value);
+    }
+  } catch (err) {
+    console.error(err);
+    uni.showToast({ title: err.message || '初始化失败', icon: 'none' });
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function loadCategories() {
+  try {
+    const tree = await fetchCategoryTree();
+    const normalizeTree = (nodes = []) =>
+      (nodes || []).map((node) => ({
+        ...node,
+        expanded: node.expanded || false,
+        children: normalizeTree(node.children || []),
+      }));
+    categories.value = Array.isArray(tree) ? normalizeTree(tree) : [];
+    if (form.value.categoryId) {
+      form.value.categoryName = findCategoryName(categories.value, form.value.categoryId);
+    }
+  } catch (err) {
+    console.error('load categories failed', err);
+    uni.showToast({ title: '加载章节失败', icon: 'none' });
+  }
+}
+
 function createDefaultOptions(count = 4) {
   return Array.from({ length: count }).map((_, idx) => ({
     label: String.fromCharCode(65 + idx),
     text: '',
+    images: [],
   }));
 }
 
@@ -392,8 +415,8 @@ function handleTypeChange(val) {
   if (val === 'JUDGE') {
     // 切换到判断题：强制设置为 正确/错误
     form.value.options = [
-      { label: 'A', text: '正确' },
-      { label: 'B', text: '错误' },
+      { label: 'A', text: '正确', images: [] },
+      { label: 'B', text: '错误', images: [] },
     ];
   } else if (val === 'FILL') {
     // 切换到填空题
@@ -416,11 +439,56 @@ function handleTypeChange(val) {
   }
 }
 
+async function loadQuestionDetail(id) {
+  try {
+    const detail = await fetchQuestionRaw(id);
+    if (!detail) {
+      uni.showToast({ title: '题目不存在', icon: 'none' });
+      return;
+    }
+    const type = normalizeBackendType(detail.type);
+    const answers = splitAnswerList(detail.answer);
+    form.value.type = type;
+    form.value.stemHtml = detail.title || '';
+    form.value.analysis = detail.explanation || '';
+    form.value.difficulty = detail.difficulty || '';
+    form.value.categoryId = detail.categoryId || '';
+    form.value.categoryName = findCategoryName(categories.value, detail.categoryId);
+
+    if (type === 'FILL') {
+      form.value.blanks = answers.length
+        ? answers.map((text, idx) => ({ id: Date.now() + idx, text }))
+        : [{ id: Date.now(), text: '' }];
+      form.value.answers = [];
+    } else {
+      const parsedOptions = parseOptionList(detail.optionsJson || detail.options, answers);
+      if (parsedOptions.length) {
+        form.value.options = parsedOptions;
+      } else if (type === 'JUDGE') {
+        form.value.options = [
+          { label: 'A', text: '正确' },
+          { label: 'B', text: '错误' },
+        ];
+      } else {
+        form.value.options = createDefaultOptions(4);
+      }
+      form.value.answers = answers;
+    }
+    restoreEditorContents();
+  } catch (err) {
+    console.error('load question failed', err);
+    uni.showToast({ title: err.message || '加载题目失败', icon: 'none' });
+  }
+}
+
 // 题干编辑器
 function onStemReady(e) {
   // 尝试使用 createSelectorQuery 获取 context，以兼容更多平台
   uni.createSelectorQuery().in(instance).select('#stemEditor').context((res) => {
     stemEditorCtx.value = res.context;
+    if (form.value.stemHtml) {
+      res.context.setContents({ html: form.value.stemHtml });
+    }
   }).exec();
 }
 function handleStemInput(e) {
@@ -446,18 +514,35 @@ function handleToolbar(name, value) {
 // 通用插入图片
 function insertImage() {
     let ctx = null;
+    let isOption = false;
     if (currentFocus.value === 'stem') ctx = stemEditorCtx.value;
     else if (currentFocus.value === 'analysis') ctx = analysisEditorCtx.value;
     else if (currentFocus.value.startsWith('option-')) {
         const idx = currentFocus.value.split('-')[1];
         ctx = optionEditorCtxs.value[idx];
+        isOption = true;
     }
 
     if (!ctx) return;
     uni.chooseImage({
         count: 1,
-        success: (res) => {
-            ctx.insertImage({ src: res.tempFilePaths[0], width: '80%' });
+        success: async (res) => {
+            const localPath = res.tempFilePaths[0];
+            if (!isOption) {
+                ctx.insertImage({ src: localPath, width: '80%' });
+                return;
+            }
+            try {
+                const url = await uploadQuestionImage(localPath);
+                ctx.insertImage({ src: url, width: '80%' });
+                const idx = currentFocus.value.split('-')[1];
+                if (form.value.options[idx]) {
+                    form.value.options[idx].images = Array.from(new Set([...(form.value.options[idx].images || []), url]));
+                }
+            } catch (err) {
+                console.error('upload image failed', err);
+                uni.showToast({ title: err.message || '上传失败', icon: 'none' });
+            }
         }
     });
 }
@@ -467,13 +552,17 @@ function onOptionReady(index) {
     uni.createSelectorQuery().in(instance).select('#optionEditor' + index).context((res) => {
         optionEditorCtxs.value[index] = res.context;
         // 如果有初始值，需要 setContents
-        if (form.value.options[index].text) {
-            res.context.setContents({ html: form.value.options[index].text });
+        const opt = form.value.options[index];
+        if (opt.text || (opt.images && opt.images.length)) {
+            const opt = form.value.options[index];
+            const html = buildOptionHtml(opt);
+            res.context.setContents({ html });
         }
     }).exec();
 }
 function handleOptionInput(e, index) {
     form.value.options[index].text = e.detail.html;
+    form.value.options[index].images = extractImageUrls(e.detail.html || '');
 }
 
 // 解析编辑器
@@ -509,7 +598,7 @@ function onEditorBlur() {
 function addOption() {
   if (optionsDisabled.value) return;
   const nextLabel = String.fromCharCode(65 + form.value.options.length);
-  form.value.options.push({ label: nextLabel, text: '' });
+  form.value.options.push({ label: nextLabel, text: '', images: [] });
 }
 
 function removeOption(index) {
@@ -552,13 +641,14 @@ function applyBulkOptions() {
     while(currentIdx < form.value.options.length && lines.length > 0) {
         if(!form.value.options[currentIdx].text) {
             form.value.options[currentIdx].text = lines.shift();
+            form.value.options[currentIdx].images = [];
         }
         currentIdx++;
     }
     // 剩下的新增
     while(lines.length > 0 && !optionsDisabled.value) {
          const nextLabel = String.fromCharCode(65 + form.value.options.length);
-         form.value.options.push({ label: nextLabel, text: lines.shift() });
+         form.value.options.push({ label: nextLabel, text: lines.shift(), images: [] });
     }
     bulkPopup.value.close();
 }
@@ -573,12 +663,16 @@ function removeBlank(index) {
 
 // 底部选择器
 function chooseCategory() {
+  if (!categories.value.length) {
+    loadCategories();
+  }
   categoryPopup.value.open();
 }
 function openEditCategory() {
   editCategoryPopup.value.open();
 }
 function selectCategory(item) {
+    form.value.categoryId = item.id;
     form.value.categoryName = item.name;
     categoryPopup.value.close();
 }
@@ -589,14 +683,16 @@ function addCategory() {
         title: '添加章节',
         editable: true,
         placeholderText: '请输入章节名称',
-        success: (res) => {
+        success: async (res) => {
             if (res.confirm && res.content) {
-                categories.value.push({
-                    id: Date.now(),
-                    name: res.content,
-                    expanded: true,
-                    children: []
-                });
+                try {
+                    await createCategory({ name: res.content, status: 1 });
+                    await loadCategories();
+                    uni.showToast({ title: '创建成功', icon: 'success' });
+                } catch (err) {
+                    console.error(err);
+                    uni.showToast({ title: err.message || '创建失败', icon: 'none' });
+                }
             }
         }
     });
@@ -606,16 +702,18 @@ function addSubCategory(parentIndex) {
         title: '添加子章节',
         editable: true,
         placeholderText: '请输入子章节名称',
-        success: (res) => {
+        success: async (res) => {
             if (res.confirm && res.content) {
-                if (!categories.value[parentIndex].children) {
-                    categories.value[parentIndex].children = [];
+                const parent = categories.value[parentIndex];
+                try {
+                    await createCategory({ name: res.content, status: 1, parentId: parent.id });
+                    await loadCategories();
+                    categories.value[parentIndex].expanded = true;
+                    uni.showToast({ title: '创建成功', icon: 'success' });
+                } catch (err) {
+                    console.error(err);
+                    uni.showToast({ title: err.message || '创建失败', icon: 'none' });
                 }
-                categories.value[parentIndex].children.push({
-                    id: Date.now(),
-                    name: res.content
-                });
-                categories.value[parentIndex].expanded = true;
             }
         }
     });
@@ -626,9 +724,16 @@ function editCategory(item) {
         editable: true,
         content: item.name,
         placeholderText: '请输入名称',
-        success: (res) => {
+        success: async (res) => {
             if (res.confirm && res.content) {
-                item.name = res.content;
+                try {
+                    await updateCategory(item.id, { name: res.content, status: 1, parentId: item.parentId });
+                    await loadCategories();
+                    uni.showToast({ title: '更新成功', icon: 'success' });
+                } catch (err) {
+                    console.error(err);
+                    uni.showToast({ title: err.message || '更新失败', icon: 'none' });
+                }
             }
         }
     });
@@ -637,9 +742,16 @@ function removeCategory(index) {
     uni.showModal({
         title: '提示',
         content: '确定要删除该章节吗？',
-        success: (res) => {
+        success: async (res) => {
             if (res.confirm) {
-                categories.value.splice(index, 1);
+                try {
+                    await deleteCategory(categories.value[index].id);
+                    await loadCategories();
+                    uni.showToast({ title: '删除成功', icon: 'success' });
+                } catch (err) {
+                    console.error(err);
+                    uni.showToast({ title: err.message || '删除失败', icon: 'none' });
+                }
             }
         }
     });
@@ -648,9 +760,16 @@ function removeSubCategory(parentIndex, subIndex) {
     uni.showModal({
         title: '提示',
         content: '确定要删除该子章节吗？',
-        success: (res) => {
+        success: async (res) => {
             if (res.confirm) {
-                categories.value[parentIndex].children.splice(subIndex, 1);
+                try {
+                    await deleteCategory(categories.value[parentIndex].children[subIndex].id);
+                    await loadCategories();
+                    uni.showToast({ title: '删除成功', icon: 'success' });
+                } catch (err) {
+                    console.error(err);
+                    uni.showToast({ title: err.message || '删除失败', icon: 'none' });
+                }
             }
         }
     });
@@ -689,15 +808,201 @@ function renderDifficulty(val) {
   return t ? t.text : '';
 }
 
-function submit() {
-  console.log('Submit:', form.value);
-  if (!form.value.stemHtml && !form.value.stemText) {
-      return uni.showToast({ title: '请输入题干', icon:'none' });
+function normalizeBackendType(val) {
+  const upper = String(val || '').toUpperCase();
+  if (upper.includes('MULT')) return 'MULTIPLE';
+  if (upper.includes('TRUE') || upper.includes('JUDGE')) return 'JUDGE';
+  if (upper.includes('FILL') || upper.includes('SHORT')) return 'FILL';
+  return 'SINGLE';
+}
+
+function splitAnswerList(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val.map((i) => String(i).toUpperCase());
+  return String(val)
+    .split(/[,;\s]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => s.toUpperCase());
+}
+
+function extractImageUrls(html = '') {
+  const urls = [];
+  const regex = /<img[^>]+src=["']?([^"'>\s]+)["']?[^>]*>/gi;
+  let match = regex.exec(html);
+  while (match) {
+    if (match[1]) urls.push(match[1]);
+    match = regex.exec(html);
   }
-  if (isChoice.value && form.value.answers.length === 0) {
-      return uni.showToast({ title: '请勾选正确答案', icon:'none' });
+  return Array.from(new Set(urls));
+}
+
+function buildOptionHtml(opt) {
+  const text = opt?.text || '';
+  const imgs = Array.isArray(opt?.images) ? opt.images : [];
+  const imgHtml = imgs.map((src) => `<p><img src="${src}" style="max-width:100%;"/></p>`).join('');
+  return text + imgHtml;
+}
+
+function parseOptionList(rawOptions, answers = []) {
+  let list = [];
+  if (typeof rawOptions === 'string') {
+    try {
+      list = JSON.parse(rawOptions);
+    } catch (err) {
+      list = [];
+    }
+  } else if (Array.isArray(rawOptions)) {
+    list = rawOptions;
   }
-  uni.showToast({ title: '添加成功', icon: 'success' });
+  if (!Array.isArray(list)) return [];
+  return list.map((opt, idx) => {
+    const value = (opt.value || opt.label || String.fromCharCode(65 + idx)).toString().toUpperCase();
+    return {
+      label: value,
+      text: opt.label || opt.text || '',
+      images: Array.isArray(opt.images) ? opt.images : [],
+      correct: answers.includes(value),
+    };
+  });
+}
+
+function restoreEditorContents() {
+  nextTick(() => {
+    if (stemEditorCtx.value && stemEditorCtx.value.setContents) {
+      stemEditorCtx.value.setContents({ html: form.value.stemHtml || '<p></p>' });
+    }
+    if (analysisEditorCtx.value && analysisEditorCtx.value.setContents) {
+      analysisEditorCtx.value.setContents({ html: form.value.analysis || '<p></p>' });
+    }
+    form.value.options.forEach((opt, idx) => {
+      const ctx = optionEditorCtxs.value[idx];
+      if (ctx && ctx.setContents) {
+        ctx.setContents({ html: opt.text || '<p></p>' });
+      }
+    });
+  });
+}
+
+function findCategoryName(list = [], id) {
+  if (id === undefined || id === null || id === '') return '';
+  for (const item of list || []) {
+    if (`${item.id}` === `${id}`) return item.name;
+    const childName = findCategoryName(item.children, id);
+    if (childName) return childName;
+  }
+  return '';
+}
+
+function stripHtml(html = '') {
+  return html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').trim();
+}
+
+function buildPayload() {
+  const stemRaw = form.value.stemHtml || '';
+  const stemText = stripHtml(stemRaw);
+  if (!stemText && !stemRaw.trim()) {
+    uni.showToast({ title: '请输入题干', icon: 'none' });
+    return null;
+  }
+  const categoryId = Number(form.value.categoryId);
+  if (!categoryId) {
+    uni.showToast({ title: '请选择章节', icon: 'none' });
+    return null;
+  }
+  if (!form.value.difficulty) {
+    uni.showToast({ title: '请选择难度', icon: 'none' });
+    return null;
+  }
+
+  let answerList = [];
+  let optionPayload = [];
+  if (form.value.type === 'FILL') {
+    answerList = form.value.blanks.map((b) => stripHtml(b.text || '')).filter(Boolean);
+    if (!answerList.length) {
+      uni.showToast({ title: '请填写填空答案', icon: 'none' });
+      return null;
+    }
+  } else if (isChoice.value) {
+    if (!form.value.options.length) {
+      uni.showToast({ title: '请添加选项', icon: 'none' });
+      return null;
+    }
+    let hasEmptyOption = false;
+    const cleanedOptions = form.value.options.map((opt, idx) => {
+      const value = opt.label || String.fromCharCode(65 + idx);
+      const rawText = opt.text || '';
+      const cleanText = stripHtml(rawText);
+      const labelText = cleanText || (Array.isArray(opt.images) && opt.images.length ? '[图片选项]' : rawText) || value;
+      if (!cleanText && !rawText.trim() && (!opt.images || opt.images.length === 0)) {
+        hasEmptyOption = true;
+      }
+      return {
+        value,
+        label: labelText,
+        correct: form.value.answers.includes(value),
+        images: Array.isArray(opt.images) ? opt.images : [],
+      };
+    });
+    if (hasEmptyOption) {
+      uni.showToast({ title: '请完善所有选项内容', icon: 'none' });
+      return null;
+    }
+    if (cleanedOptions.some((opt) => !opt.label)) {
+      uni.showToast({ title: '请输入完整选项内容', icon: 'none' });
+      return null;
+    }
+    if (form.value.answers.length === 0) {
+      uni.showToast({ title: '请勾选正确答案', icon: 'none' });
+      return null;
+    }
+    optionPayload = cleanedOptions;
+    answerList = [...form.value.answers];
+  }
+
+  const normalizedAnswersRaw = answerList
+    .map((item) => (item || '').toString().trim())
+    .filter(Boolean)
+    .map((val) => (form.value.type === 'FILL' ? val : val.toUpperCase()));
+  const normalizedAnswers = form.value.type === 'FILL'
+    ? normalizedAnswersRaw
+    : normalizedAnswersRaw.sort();
+
+  const payload = {
+    title: form.value.stemHtml,
+    type: form.value.type,
+    answer: normalizedAnswers.join(','),
+    explanation: form.value.analysis || '',
+    categoryId,
+    difficulty: form.value.difficulty,
+  };
+  if (optionPayload.length) {
+    payload.options = JSON.stringify(optionPayload);
+  }
+  return payload;
+}
+
+async function submit() {
+  const payload = buildPayload();
+  if (!payload || saving.value) return;
+  saving.value = true;
+  try {
+    if (questionId.value) {
+      await updateQuestion(questionId.value, payload);
+      uni.showToast({ title: '更新成功', icon: 'success' });
+    } else {
+      const res = await createQuestion(payload);
+      if (res && res.id) {
+        questionId.value = res.id;
+      }
+      uni.showToast({ title: '添加成功', icon: 'success' });
+    }
+  } catch (err) {
+    console.error(err);
+    uni.showToast({ title: err.message || '提交失败', icon: 'none' });
+  } finally {
+    saving.value = false;
+  }
 }
 </script>
 

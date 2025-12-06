@@ -52,6 +52,19 @@ async function fetchCategories() {
     sort: item.sort
   }));
 }
+async function createCategory(payload) {
+  return api_http.request({ url: "/categories", method: "POST", data: payload });
+}
+async function updateCategory(id, payload) {
+  if (!id)
+    throw new Error("缺少分类ID");
+  return api_http.request({ url: `/categories/${id}`, method: "PUT", data: payload });
+}
+async function deleteCategory(id) {
+  if (!id)
+    throw new Error("缺少分类ID");
+  return api_http.request({ url: `/categories/${id}`, method: "DELETE" });
+}
 function flattenCategoryTree(tree = []) {
   const result = [];
   const walk = (nodes) => {
@@ -70,7 +83,10 @@ function categoryNameById(list = [], id) {
   return ((_a = list.find((item) => String(item.id) === String(id))) == null ? void 0 : _a.name) || "";
 }
 exports.categoryNameById = categoryNameById;
+exports.createCategory = createCategory;
+exports.deleteCategory = deleteCategory;
 exports.fetchCategories = fetchCategories;
 exports.fetchCategoryTree = fetchCategoryTree;
 exports.flattenCategoryTree = flattenCategoryTree;
+exports.updateCategory = updateCategory;
 //# sourceMappingURL=../../.sourcemap/mp-weixin/api/categories.js.map

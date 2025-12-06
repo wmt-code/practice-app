@@ -35,11 +35,11 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
     public Question createQuestion(QuestionCreateRequest request) {
         Question question = new Question();
         question.setTitle(request.getTitle());
-        question.setType(request.getType());
+        question.setType(normalizeType(request.getType()));
         question.setAnswer(request.getAnswer());
         question.setOptionsJson(request.getOptions());
         question.setCategoryId(request.getCategoryId());
-        question.setDifficulty(request.getDifficulty());
+        question.setDifficulty(normalizeDifficulty(request.getDifficulty()));
         question.setScore(request.getScore());
         question.setDuration(request.getDuration());
         question.setExplanation(request.getExplanation());
@@ -56,11 +56,11 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
             throw new BusinessException(ErrorCode.NOT_FOUND, "题目不存在");
         }
         question.setTitle(request.getTitle());
-        question.setType(request.getType());
+        question.setType(normalizeType(request.getType()));
         question.setAnswer(request.getAnswer());
         question.setOptionsJson(request.getOptions());
         question.setCategoryId(request.getCategoryId());
-        question.setDifficulty(request.getDifficulty());
+        question.setDifficulty(normalizeDifficulty(request.getDifficulty()));
         question.setScore(request.getScore());
         question.setDuration(request.getDuration());
         question.setExplanation(request.getExplanation());
@@ -153,5 +153,27 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question> i
         } catch (Exception e) {
             return Collections.emptyList();
         }
+    }
+
+    private String normalizeType(String type) {
+        if (StringUtils.isBlank(type)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "题目类型不能为空");
+        }
+        String upper = type.toUpperCase();
+        if (upper.contains("MULTIPLE")) return "multiple_choice";
+        if (upper.contains("TRUE") || upper.contains("JUDGE")) return "true_false";
+        if (upper.contains("FILL")) return "fill_in_the_blank";
+        return "single_choice";
+    }
+
+    private String normalizeDifficulty(String diff) {
+        if (StringUtils.isBlank(diff)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "难度不能为空");
+        }
+        String upper = diff.toUpperCase();
+        if ("HARD".equals(upper)) return "hard";
+        if ("MEDIUM".equals(upper)) return "medium";
+        if ("EASY".equals(upper)) return "easy";
+        return upper.toLowerCase();
     }
 }

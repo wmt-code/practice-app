@@ -58,6 +58,20 @@ export async function fetchCategories() {
   }));
 }
 
+export async function createCategory(payload) {
+  return request({ url: '/categories', method: 'POST', data: payload });
+}
+
+export async function updateCategory(id, payload) {
+  if (!id) throw new Error('缺少分类ID');
+  return request({ url: `/categories/${id}`, method: 'PUT', data: payload });
+}
+
+export async function deleteCategory(id) {
+  if (!id) throw new Error('缺少分类ID');
+  return request({ url: `/categories/${id}`, method: 'DELETE' });
+}
+
 export function flattenCategoryTree(tree = []) {
   const result = [];
   const walk = (nodes) => {

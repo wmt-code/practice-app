@@ -1,5 +1,7 @@
 "use strict";
 const common_vendor = require("../../common/vendor.js");
+const api_categories = require("../../api/categories.js");
+const api_questions = require("../../api/questions.js");
 if (!Array) {
   const _easycom_uni_icons2 = common_vendor.resolveComponent("uni-icons");
   const _easycom_uni_popup_dialog2 = common_vendor.resolveComponent("uni-popup-dialog");
@@ -28,6 +30,9 @@ const _sfc_main = {
     ];
     const instance = common_vendor.getCurrentInstance();
     const mode = common_vendor.ref("single");
+    const questionId = common_vendor.ref(null);
+    const loading = common_vendor.ref(false);
+    const saving = common_vendor.ref(false);
     common_vendor.ref(false);
     const stemEditorCtx = common_vendor.ref(null);
     const analysisEditorCtx = common_vendor.ref(null);
@@ -39,33 +44,7 @@ const _sfc_main = {
     let blurTimer = null;
     const categoryPopup = common_vendor.ref(null);
     const editCategoryPopup = common_vendor.ref(null);
-    const categories = common_vendor.ref([
-      {
-        id: 1,
-        name: "章节1",
-        expanded: true,
-        children: [
-          { id: 11, name: "子章节1" }
-        ]
-      },
-      {
-        id: 2,
-        name: "章节2",
-        expanded: true,
-        children: [
-          { id: 21, name: "子章节2" }
-        ]
-      },
-      {
-        id: 3,
-        name: "章节3",
-        expanded: true,
-        children: [
-          { id: 31, name: "子章节1" },
-          { id: 32, name: "子章节2" }
-        ]
-      }
-    ]);
+    const categories = common_vendor.ref([]);
     const form = common_vendor.ref({
       type: "SINGLE",
       // SINGLE, MULTIPLE, JUDGE, FILL
@@ -74,6 +53,7 @@ const _sfc_main = {
       answers: [],
       blanks: [{ id: Date.now(), text: "" }],
       analysis: "",
+      categoryId: "",
       categoryName: "",
       difficulty: ""
       // 截图里默认可能为空
@@ -86,13 +66,51 @@ const _sfc_main = {
     const isSingle = common_vendor.computed(() => ["SINGLE", "JUDGE"].includes(form.value.type));
     const canRemoveOption = common_vendor.computed(() => form.value.options.length > 2 && form.value.type !== "JUDGE");
     const optionsDisabled = common_vendor.computed(() => form.value.options.length >= 8 || form.value.type === "JUDGE");
+    const submitText = common_vendor.computed(() => questionId.value ? "保存修改" : "添加试题");
     common_vendor.onLoad((query) => {
       mode.value = query.mode || "single";
+      if (query.id) {
+        const parsed = Number(query.id);
+        questionId.value = Number.isNaN(parsed) ? query.id : parsed;
+      }
+      initPage();
     });
+    async function initPage() {
+      loading.value = true;
+      try {
+        await loadCategories();
+        if (questionId.value) {
+          await loadQuestionDetail(questionId.value);
+        }
+      } catch (err) {
+        common_vendor.index.__f__("error", "at pages/import-question/index.vue:367", err);
+        common_vendor.index.showToast({ title: err.message || "初始化失败", icon: "none" });
+      } finally {
+        loading.value = false;
+      }
+    }
+    async function loadCategories() {
+      try {
+        const tree = await api_categories.fetchCategoryTree();
+        const normalizeTree = (nodes = []) => (nodes || []).map((node) => ({
+          ...node,
+          expanded: node.expanded || false,
+          children: normalizeTree(node.children || [])
+        }));
+        categories.value = Array.isArray(tree) ? normalizeTree(tree) : [];
+        if (form.value.categoryId) {
+          form.value.categoryName = findCategoryName(categories.value, form.value.categoryId);
+        }
+      } catch (err) {
+        common_vendor.index.__f__("error", "at pages/import-question/index.vue:388", "load categories failed", err);
+        common_vendor.index.showToast({ title: "加载章节失败", icon: "none" });
+      }
+    }
     function createDefaultOptions(count = 4) {
       return Array.from({ length: count }).map((_, idx) => ({
         label: String.fromCharCode(65 + idx),
-        text: ""
+        text: "",
+        images: []
       }));
     }
     function openTypeSelect() {
@@ -108,8 +126,8 @@ const _sfc_main = {
       form.value.answers = [];
       if (val === "JUDGE") {
         form.value.options = [
-          { label: "A", text: "正确" },
-          { label: "B", text: "错误" }
+          { label: "A", text: "正确", images: [] },
+          { label: "B", text: "错误", images: [] }
         ];
       } else if (val === "FILL") {
         if (!form.value.blanks || form.value.blanks.length === 0) {
@@ -122,9 +140,50 @@ const _sfc_main = {
         }
       }
     }
+    async function loadQuestionDetail(id) {
+      try {
+        const detail = await api_questions.fetchQuestionRaw(id);
+        if (!detail) {
+          common_vendor.index.showToast({ title: "题目不存在", icon: "none" });
+          return;
+        }
+        const type = normalizeBackendType(detail.type);
+        const answers = splitAnswerList(detail.answer);
+        form.value.type = type;
+        form.value.stemHtml = detail.title || "";
+        form.value.analysis = detail.explanation || "";
+        form.value.difficulty = detail.difficulty || "";
+        form.value.categoryId = detail.categoryId || "";
+        form.value.categoryName = findCategoryName(categories.value, detail.categoryId);
+        if (type === "FILL") {
+          form.value.blanks = answers.length ? answers.map((text, idx) => ({ id: Date.now() + idx, text })) : [{ id: Date.now(), text: "" }];
+          form.value.answers = [];
+        } else {
+          const parsedOptions = parseOptionList(detail.optionsJson || detail.options, answers);
+          if (parsedOptions.length) {
+            form.value.options = parsedOptions;
+          } else if (type === "JUDGE") {
+            form.value.options = [
+              { label: "A", text: "正确" },
+              { label: "B", text: "错误" }
+            ];
+          } else {
+            form.value.options = createDefaultOptions(4);
+          }
+          form.value.answers = answers;
+        }
+        restoreEditorContents();
+      } catch (err) {
+        common_vendor.index.__f__("error", "at pages/import-question/index.vue:479", "load question failed", err);
+        common_vendor.index.showToast({ title: err.message || "加载题目失败", icon: "none" });
+      }
+    }
     function onStemReady(e) {
       common_vendor.index.createSelectorQuery().in(instance).select("#stemEditor").context((res) => {
         stemEditorCtx.value = res.context;
+        if (form.value.stemHtml) {
+          res.context.setContents({ html: form.value.stemHtml });
+        }
       }).exec();
     }
     function handleStemInput(e) {
@@ -148,6 +207,7 @@ const _sfc_main = {
     }
     function insertImage() {
       let ctx = null;
+      let isOption = false;
       if (currentFocus.value === "stem")
         ctx = stemEditorCtx.value;
       else if (currentFocus.value === "analysis")
@@ -155,26 +215,46 @@ const _sfc_main = {
       else if (currentFocus.value.startsWith("option-")) {
         const idx = currentFocus.value.split("-")[1];
         ctx = optionEditorCtxs.value[idx];
+        isOption = true;
       }
       if (!ctx)
         return;
       common_vendor.index.chooseImage({
         count: 1,
-        success: (res) => {
-          ctx.insertImage({ src: res.tempFilePaths[0], width: "80%" });
+        success: async (res) => {
+          const localPath = res.tempFilePaths[0];
+          if (!isOption) {
+            ctx.insertImage({ src: localPath, width: "80%" });
+            return;
+          }
+          try {
+            const url = await api_questions.uploadQuestionImage(localPath);
+            ctx.insertImage({ src: url, width: "80%" });
+            const idx = currentFocus.value.split("-")[1];
+            if (form.value.options[idx]) {
+              form.value.options[idx].images = Array.from(/* @__PURE__ */ new Set([...form.value.options[idx].images || [], url]));
+            }
+          } catch (err) {
+            common_vendor.index.__f__("error", "at pages/import-question/index.vue:543", "upload image failed", err);
+            common_vendor.index.showToast({ title: err.message || "上传失败", icon: "none" });
+          }
         }
       });
     }
     function onOptionReady(index) {
       common_vendor.index.createSelectorQuery().in(instance).select("#optionEditor" + index).context((res) => {
         optionEditorCtxs.value[index] = res.context;
-        if (form.value.options[index].text) {
-          res.context.setContents({ html: form.value.options[index].text });
+        const opt = form.value.options[index];
+        if (opt.text || opt.images && opt.images.length) {
+          const opt2 = form.value.options[index];
+          const html = buildOptionHtml(opt2);
+          res.context.setContents({ html });
         }
       }).exec();
     }
     function handleOptionInput(e, index) {
       form.value.options[index].text = e.detail.html;
+      form.value.options[index].images = extractImageUrls(e.detail.html || "");
     }
     function onAnalysisReady() {
       common_vendor.index.createSelectorQuery().in(instance).select("#analysisEditor").context((res) => {
@@ -204,7 +284,7 @@ const _sfc_main = {
       if (optionsDisabled.value)
         return;
       const nextLabel = String.fromCharCode(65 + form.value.options.length);
-      form.value.options.push({ label: nextLabel, text: "" });
+      form.value.options.push({ label: nextLabel, text: "", images: [] });
     }
     function removeOption(index) {
       if (!canRemoveOption.value)
@@ -237,12 +317,13 @@ const _sfc_main = {
       while (currentIdx < form.value.options.length && lines.length > 0) {
         if (!form.value.options[currentIdx].text) {
           form.value.options[currentIdx].text = lines.shift();
+          form.value.options[currentIdx].images = [];
         }
         currentIdx++;
       }
       while (lines.length > 0 && !optionsDisabled.value) {
         const nextLabel = String.fromCharCode(65 + form.value.options.length);
-        form.value.options.push({ label: nextLabel, text: lines.shift() });
+        form.value.options.push({ label: nextLabel, text: lines.shift(), images: [] });
       }
       bulkPopup.value.close();
     }
@@ -253,12 +334,16 @@ const _sfc_main = {
       form.value.blanks.splice(index, 1);
     }
     function chooseCategory() {
+      if (!categories.value.length) {
+        loadCategories();
+      }
       categoryPopup.value.open();
     }
     function openEditCategory() {
       editCategoryPopup.value.open();
     }
     function selectCategory(item) {
+      form.value.categoryId = item.id;
       form.value.categoryName = item.name;
       categoryPopup.value.close();
     }
@@ -267,14 +352,16 @@ const _sfc_main = {
         title: "添加章节",
         editable: true,
         placeholderText: "请输入章节名称",
-        success: (res) => {
+        success: async (res) => {
           if (res.confirm && res.content) {
-            categories.value.push({
-              id: Date.now(),
-              name: res.content,
-              expanded: true,
-              children: []
-            });
+            try {
+              await api_categories.createCategory({ name: res.content, status: 1 });
+              await loadCategories();
+              common_vendor.index.showToast({ title: "创建成功", icon: "success" });
+            } catch (err) {
+              common_vendor.index.__f__("error", "at pages/import-question/index.vue:693", err);
+              common_vendor.index.showToast({ title: err.message || "创建失败", icon: "none" });
+            }
           }
         }
       });
@@ -284,16 +371,18 @@ const _sfc_main = {
         title: "添加子章节",
         editable: true,
         placeholderText: "请输入子章节名称",
-        success: (res) => {
+        success: async (res) => {
           if (res.confirm && res.content) {
-            if (!categories.value[parentIndex].children) {
-              categories.value[parentIndex].children = [];
+            const parent = categories.value[parentIndex];
+            try {
+              await api_categories.createCategory({ name: res.content, status: 1, parentId: parent.id });
+              await loadCategories();
+              categories.value[parentIndex].expanded = true;
+              common_vendor.index.showToast({ title: "创建成功", icon: "success" });
+            } catch (err) {
+              common_vendor.index.__f__("error", "at pages/import-question/index.vue:714", err);
+              common_vendor.index.showToast({ title: err.message || "创建失败", icon: "none" });
             }
-            categories.value[parentIndex].children.push({
-              id: Date.now(),
-              name: res.content
-            });
-            categories.value[parentIndex].expanded = true;
           }
         }
       });
@@ -304,9 +393,16 @@ const _sfc_main = {
         editable: true,
         content: item.name,
         placeholderText: "请输入名称",
-        success: (res) => {
+        success: async (res) => {
           if (res.confirm && res.content) {
-            item.name = res.content;
+            try {
+              await api_categories.updateCategory(item.id, { name: res.content, status: 1, parentId: item.parentId });
+              await loadCategories();
+              common_vendor.index.showToast({ title: "更新成功", icon: "success" });
+            } catch (err) {
+              common_vendor.index.__f__("error", "at pages/import-question/index.vue:734", err);
+              common_vendor.index.showToast({ title: err.message || "更新失败", icon: "none" });
+            }
           }
         }
       });
@@ -315,9 +411,16 @@ const _sfc_main = {
       common_vendor.index.showModal({
         title: "提示",
         content: "确定要删除该章节吗？",
-        success: (res) => {
+        success: async (res) => {
           if (res.confirm) {
-            categories.value.splice(index, 1);
+            try {
+              await api_categories.deleteCategory(categories.value[index].id);
+              await loadCategories();
+              common_vendor.index.showToast({ title: "删除成功", icon: "success" });
+            } catch (err) {
+              common_vendor.index.__f__("error", "at pages/import-question/index.vue:752", err);
+              common_vendor.index.showToast({ title: err.message || "删除失败", icon: "none" });
+            }
           }
         }
       });
@@ -326,9 +429,16 @@ const _sfc_main = {
       common_vendor.index.showModal({
         title: "提示",
         content: "确定要删除该子章节吗？",
-        success: (res) => {
+        success: async (res) => {
           if (res.confirm) {
-            categories.value[parentIndex].children.splice(subIndex, 1);
+            try {
+              await api_categories.deleteCategory(categories.value[parentIndex].children[subIndex].id);
+              await loadCategories();
+              common_vendor.index.showToast({ title: "删除成功", icon: "success" });
+            } catch (err) {
+              common_vendor.index.__f__("error", "at pages/import-question/index.vue:770", err);
+              common_vendor.index.showToast({ title: err.message || "删除失败", icon: "none" });
+            }
           }
         }
       });
@@ -365,15 +475,191 @@ const _sfc_main = {
       const t = difficultyOptions.find((d) => d.value === val);
       return t ? t.text : "";
     }
-    function submit() {
-      common_vendor.index.__f__("log", "at pages/import-question/index.vue:693", "Submit:", form.value);
-      if (!form.value.stemHtml && !form.value.stemText) {
-        return common_vendor.index.showToast({ title: "请输入题干", icon: "none" });
+    function normalizeBackendType(val) {
+      const upper = String(val || "").toUpperCase();
+      if (upper.includes("MULT"))
+        return "MULTIPLE";
+      if (upper.includes("TRUE") || upper.includes("JUDGE"))
+        return "JUDGE";
+      if (upper.includes("FILL") || upper.includes("SHORT"))
+        return "FILL";
+      return "SINGLE";
+    }
+    function splitAnswerList(val) {
+      if (!val)
+        return [];
+      if (Array.isArray(val))
+        return val.map((i) => String(i).toUpperCase());
+      return String(val).split(/[,;\s]+/).map((s) => s.trim()).filter(Boolean).map((s) => s.toUpperCase());
+    }
+    function extractImageUrls(html = "") {
+      const urls = [];
+      const regex = /<img[^>]+src=["']?([^"'>\s]+)["']?[^>]*>/gi;
+      let match = regex.exec(html);
+      while (match) {
+        if (match[1])
+          urls.push(match[1]);
+        match = regex.exec(html);
       }
-      if (isChoice.value && form.value.answers.length === 0) {
-        return common_vendor.index.showToast({ title: "请勾选正确答案", icon: "none" });
+      return Array.from(new Set(urls));
+    }
+    function buildOptionHtml(opt) {
+      const text = (opt == null ? void 0 : opt.text) || "";
+      const imgs = Array.isArray(opt == null ? void 0 : opt.images) ? opt.images : [];
+      const imgHtml = imgs.map((src) => `<p><img src="${src}" style="max-width:100%;"/></p>`).join("");
+      return text + imgHtml;
+    }
+    function parseOptionList(rawOptions, answers = []) {
+      let list = [];
+      if (typeof rawOptions === "string") {
+        try {
+          list = JSON.parse(rawOptions);
+        } catch (err) {
+          list = [];
+        }
+      } else if (Array.isArray(rawOptions)) {
+        list = rawOptions;
       }
-      common_vendor.index.showToast({ title: "添加成功", icon: "success" });
+      if (!Array.isArray(list))
+        return [];
+      return list.map((opt, idx) => {
+        const value = (opt.value || opt.label || String.fromCharCode(65 + idx)).toString().toUpperCase();
+        return {
+          label: value,
+          text: opt.label || opt.text || "",
+          images: Array.isArray(opt.images) ? opt.images : [],
+          correct: answers.includes(value)
+        };
+      });
+    }
+    function restoreEditorContents() {
+      common_vendor.nextTick$1(() => {
+        if (stemEditorCtx.value && stemEditorCtx.value.setContents) {
+          stemEditorCtx.value.setContents({ html: form.value.stemHtml || "<p></p>" });
+        }
+        if (analysisEditorCtx.value && analysisEditorCtx.value.setContents) {
+          analysisEditorCtx.value.setContents({ html: form.value.analysis || "<p></p>" });
+        }
+        form.value.options.forEach((opt, idx) => {
+          const ctx = optionEditorCtxs.value[idx];
+          if (ctx && ctx.setContents) {
+            ctx.setContents({ html: opt.text || "<p></p>" });
+          }
+        });
+      });
+    }
+    function findCategoryName(list = [], id) {
+      if (id === void 0 || id === null || id === "")
+        return "";
+      for (const item of list || []) {
+        if (`${item.id}` === `${id}`)
+          return item.name;
+        const childName = findCategoryName(item.children, id);
+        if (childName)
+          return childName;
+      }
+      return "";
+    }
+    function stripHtml(html = "") {
+      return html.replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").trim();
+    }
+    function buildPayload() {
+      const stemRaw = form.value.stemHtml || "";
+      const stemText = stripHtml(stemRaw);
+      if (!stemText && !stemRaw.trim()) {
+        common_vendor.index.showToast({ title: "请输入题干", icon: "none" });
+        return null;
+      }
+      const categoryId = Number(form.value.categoryId);
+      if (!categoryId) {
+        common_vendor.index.showToast({ title: "请选择章节", icon: "none" });
+        return null;
+      }
+      if (!form.value.difficulty) {
+        common_vendor.index.showToast({ title: "请选择难度", icon: "none" });
+        return null;
+      }
+      let answerList = [];
+      let optionPayload = [];
+      if (form.value.type === "FILL") {
+        answerList = form.value.blanks.map((b) => stripHtml(b.text || "")).filter(Boolean);
+        if (!answerList.length) {
+          common_vendor.index.showToast({ title: "请填写填空答案", icon: "none" });
+          return null;
+        }
+      } else if (isChoice.value) {
+        if (!form.value.options.length) {
+          common_vendor.index.showToast({ title: "请添加选项", icon: "none" });
+          return null;
+        }
+        let hasEmptyOption = false;
+        const cleanedOptions = form.value.options.map((opt, idx) => {
+          const value = opt.label || String.fromCharCode(65 + idx);
+          const rawText = opt.text || "";
+          const cleanText = stripHtml(rawText);
+          const labelText = cleanText || (Array.isArray(opt.images) && opt.images.length ? "[图片选项]" : rawText) || value;
+          if (!cleanText && !rawText.trim() && (!opt.images || opt.images.length === 0)) {
+            hasEmptyOption = true;
+          }
+          return {
+            value,
+            label: labelText,
+            correct: form.value.answers.includes(value),
+            images: Array.isArray(opt.images) ? opt.images : []
+          };
+        });
+        if (hasEmptyOption) {
+          common_vendor.index.showToast({ title: "请完善所有选项内容", icon: "none" });
+          return null;
+        }
+        if (cleanedOptions.some((opt) => !opt.label)) {
+          common_vendor.index.showToast({ title: "请输入完整选项内容", icon: "none" });
+          return null;
+        }
+        if (form.value.answers.length === 0) {
+          common_vendor.index.showToast({ title: "请勾选正确答案", icon: "none" });
+          return null;
+        }
+        optionPayload = cleanedOptions;
+        answerList = [...form.value.answers];
+      }
+      const normalizedAnswersRaw = answerList.map((item) => (item || "").toString().trim()).filter(Boolean).map((val) => form.value.type === "FILL" ? val : val.toUpperCase());
+      const normalizedAnswers = form.value.type === "FILL" ? normalizedAnswersRaw : normalizedAnswersRaw.sort();
+      const payload = {
+        title: form.value.stemHtml,
+        type: form.value.type,
+        answer: normalizedAnswers.join(","),
+        explanation: form.value.analysis || "",
+        categoryId,
+        difficulty: form.value.difficulty
+      };
+      if (optionPayload.length) {
+        payload.options = JSON.stringify(optionPayload);
+      }
+      return payload;
+    }
+    async function submit() {
+      const payload = buildPayload();
+      if (!payload || saving.value)
+        return;
+      saving.value = true;
+      try {
+        if (questionId.value) {
+          await api_questions.updateQuestion(questionId.value, payload);
+          common_vendor.index.showToast({ title: "更新成功", icon: "success" });
+        } else {
+          const res = await api_questions.createQuestion(payload);
+          if (res && res.id) {
+            questionId.value = res.id;
+          }
+          common_vendor.index.showToast({ title: "添加成功", icon: "success" });
+        }
+      } catch (err) {
+        common_vendor.index.__f__("error", "at pages/import-question/index.vue:1001", err);
+        common_vendor.index.showToast({ title: err.message || "提交失败", icon: "none" });
+      } finally {
+        saving.value = false;
+      }
     }
     return (_ctx, _cache) => {
       return common_vendor.e({
@@ -548,30 +834,33 @@ const _sfc_main = {
         })
       }, {
         ak: common_vendor.o(openDifficulty),
-        al: common_vendor.o(submit),
-        am: bulkText.value,
-        an: common_vendor.o(($event) => bulkText.value = $event.detail.value),
-        ao: common_vendor.o(applyBulkOptions),
-        ap: common_vendor.o(($event) => bulkPopup.value.close()),
-        aq: common_vendor.p({
+        al: common_vendor.t(submitText.value),
+        am: saving.value,
+        an: saving.value || loading.value,
+        ao: common_vendor.o(submit),
+        ap: bulkText.value,
+        aq: common_vendor.o(($event) => bulkText.value = $event.detail.value),
+        ar: common_vendor.o(applyBulkOptions),
+        as: common_vendor.o(($event) => bulkPopup.value.close()),
+        at: common_vendor.p({
           mode: "input",
           title: "批量添加选项",
           placeholder: "一行一个选项，自动填充",
           ["before-close"]: true
         }),
-        ar: common_vendor.sr(bulkPopup, "3e7c1569-13", {
+        av: common_vendor.sr(bulkPopup, "3e7c1569-13", {
           "k": "bulkPopup"
         }),
-        as: common_vendor.p({
+        aw: common_vendor.p({
           type: "dialog"
         }),
-        at: common_vendor.o(($event) => categoryPopup.value.close()),
-        av: common_vendor.o(($event) => categoryPopup.value.close()),
-        aw: common_vendor.f(categories.value, (cat, k0, i0) => {
+        ax: common_vendor.o(($event) => categoryPopup.value.close()),
+        ay: common_vendor.o(($event) => categoryPopup.value.close()),
+        az: common_vendor.f(categories.value, (cat, k0, i0) => {
           return {
             a: common_vendor.t(cat.name),
             b: common_vendor.o(($event) => selectCategory(cat), cat.id),
-            c: common_vendor.f(cat.children, (sub, k1, i1) => {
+            c: common_vendor.f(cat.children || [], (sub, k1, i1) => {
               return {
                 a: common_vendor.t(sub.name),
                 b: sub.id,
@@ -581,16 +870,16 @@ const _sfc_main = {
             d: cat.id
           };
         }),
-        ax: common_vendor.sr(categoryPopup, "3e7c1569-15", {
+        aA: common_vendor.sr(categoryPopup, "3e7c1569-15", {
           "k": "categoryPopup"
         }),
-        ay: common_vendor.p({
+        aB: common_vendor.p({
           type: "bottom",
           ["background-color"]: "#fff"
         }),
-        az: common_vendor.o(($event) => editCategoryPopup.value.close()),
-        aA: common_vendor.o(($event) => editCategoryPopup.value.close()),
-        aB: common_vendor.f(categories.value, (cat, index, i0) => {
+        aC: common_vendor.o(($event) => editCategoryPopup.value.close()),
+        aD: common_vendor.o(($event) => editCategoryPopup.value.close()),
+        aE: common_vendor.f(categories.value, (cat, index, i0) => {
           return common_vendor.e({
             a: common_vendor.o(($event) => removeCategory(index), cat.id),
             b: "3e7c1569-17-" + i0 + ",3e7c1569-16",
@@ -628,7 +917,7 @@ const _sfc_main = {
           } : {}, {
             s: cat.expanded
           }, cat.expanded ? {
-            t: common_vendor.f(cat.children, (sub, subIndex, i1) => {
+            t: common_vendor.f(cat.children || [], (sub, subIndex, i1) => {
               return common_vendor.e({
                 a: common_vendor.o(($event) => removeSubCategory(index, subIndex), sub.id),
                 b: "3e7c1569-23-" + i0 + "-" + i1 + ",3e7c1569-16",
@@ -672,26 +961,26 @@ const _sfc_main = {
             x: cat.id
           });
         }),
-        aC: common_vendor.p({
+        aF: common_vendor.p({
           type: "minus-filled",
           color: "#dd524d",
           size: "24"
         }),
-        aD: common_vendor.p({
+        aG: common_vendor.p({
           type: "plus",
           size: "20",
           color: "#007aff"
         }),
-        aE: common_vendor.p({
+        aH: common_vendor.p({
           type: "compose",
           size: "20",
           color: "#007aff"
         }),
-        aF: common_vendor.o(addCategory),
-        aG: common_vendor.sr(editCategoryPopup, "3e7c1569-16", {
+        aI: common_vendor.o(addCategory),
+        aJ: common_vendor.sr(editCategoryPopup, "3e7c1569-16", {
           "k": "editCategoryPopup"
         }),
-        aH: common_vendor.p({
+        aK: common_vendor.p({
           type: "bottom",
           ["background-color"]: "#fff"
         })

@@ -42,7 +42,8 @@ function normalizeOptions(raw) {
       value: opt.value || String.fromCharCode(65 + idx),
       text: opt.label || opt.text || opt.value || "",
       label: opt.label || opt.text || opt.value || "",
-      correct: opt.correct
+      correct: opt.correct,
+      images: Array.isArray(opt.images) ? opt.images : []
     }));
   }
   if (typeof raw === "string") {
@@ -89,9 +90,25 @@ function normalizeQuestion(data = {}) {
     answer: typeof data.answer === "string" ? data.answer.split(/[,;\s]+/).filter(Boolean) : Array.isArray(data.answer) ? data.answer : []
   };
 }
+async function fetchQuestionRaw(id) {
+  return api_http.request({ url: `/questions/${id}`, method: "GET" });
+}
 async function fetchQuestionDetail(id) {
-  const res = await api_http.request({ url: `/questions/${id}`, method: "GET" });
+  const res = await fetchQuestionRaw(id);
   return normalizeQuestion(res);
+}
+async function createQuestion(payload) {
+  return api_http.request({ url: "/questions", method: "POST", data: payload });
+}
+async function updateQuestion(id, payload) {
+  if (!id)
+    throw new Error("缺少题目ID");
+  return api_http.request({ url: `/questions/${id}`, method: "PUT", data: payload });
+}
+async function uploadQuestionImage(filePath) {
+  if (!filePath)
+    throw new Error("缺少文件路径");
+  return api_http.upload({ url: "/files/questions", filePath, name: "file" });
 }
 async function fetchPracticeSequence(params = {}) {
   const { categoryId, page = 1, size = 10 } = params;
@@ -121,7 +138,11 @@ async function fetchPracticeRandom(params = {}) {
   const { records: rawList } = Array.isArray(res) ? { records: res } : pickRecords(res);
   return rawList.map((item) => normalizeQuestion(item));
 }
+exports.createQuestion = createQuestion;
 exports.fetchPracticeRandom = fetchPracticeRandom;
 exports.fetchPracticeSequence = fetchPracticeSequence;
 exports.fetchQuestionDetail = fetchQuestionDetail;
+exports.fetchQuestionRaw = fetchQuestionRaw;
+exports.updateQuestion = updateQuestion;
+exports.uploadQuestionImage = uploadQuestionImage;
 //# sourceMappingURL=../../.sourcemap/mp-weixin/api/questions.js.map

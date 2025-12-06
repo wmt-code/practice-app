@@ -5,7 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class QuestionCreateRequest {
+public class
+QuestionCreateRequest {
     @NotBlank(message = "题目标题不能为空")
     private String title;
 

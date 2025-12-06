@@ -40,6 +40,7 @@ wechat:
 
 storage:
   avatar-path: ./uploads/avatars
+  question-path: ./uploads/questions
 
 logging:
   level:

@@ -1,4 +1,4 @@
-import { request } from './http';
+import { request, upload } from './http';
 
 function pickRecords(payload) {
   const data = payload && typeof payload === 'object' ? payload : {};
@@ -38,6 +38,7 @@ function normalizeOptions(raw) {
       text: opt.label || opt.text || opt.value || '',
       label: opt.label || opt.text || opt.value || '',
       correct: opt.correct,
+      images: Array.isArray(opt.images) ? opt.images : [],
     }));
   }
   if (typeof raw === 'string') {
@@ -87,9 +88,27 @@ export function normalizeQuestion(data = {}) {
   };
 }
 
+export async function fetchQuestionRaw(id) {
+  return request({ url: `/questions/${id}`, method: 'GET' });
+}
+
 export async function fetchQuestionDetail(id) {
-  const res = await request({ url: `/questions/${id}`, method: 'GET' });
+  const res = await fetchQuestionRaw(id);
   return normalizeQuestion(res);
+}
+
+export async function createQuestion(payload) {
+  return request({ url: '/questions', method: 'POST', data: payload });
+}
+
+export async function updateQuestion(id, payload) {
+  if (!id) throw new Error('缺少题目ID');
+  return request({ url: `/questions/${id}`, method: 'PUT', data: payload });
+}
+
+export async function uploadQuestionImage(filePath) {
+  if (!filePath) throw new Error('缺少文件路径');
+  return upload({ url: '/files/questions', filePath, name: 'file' });
 }
 
 export async function fetchQuestionPage(params = {}) {

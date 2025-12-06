@@ -22,6 +22,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
             registry.addResourceHandler("/files/avatars/**")
                     .addResourceLocations(location.endsWith("/") ? location : location + "/");
         }
+        String questionPath = storageProperties.getQuestionPath();
+        if (StringUtils.hasText(questionPath)) {
+            String location = Paths.get(questionPath).toAbsolutePath().normalize().toUri().toString();
+            registry.addResourceHandler("/files/questions/**")
+                    .addResourceLocations(location.endsWith("/") ? location : location + "/");
+        }
     }
 }
-
