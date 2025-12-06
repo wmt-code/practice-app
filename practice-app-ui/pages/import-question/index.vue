@@ -13,12 +13,12 @@
         <view class="section-header">
           <text class="label required">题干</text>
         </view>
-        <view class="toolbar" v-if="showStemToolbar">
-          <view class="tool-btn" :class="{ active: formats.bold }" @tap="handleStemToolbar('bold')"><text style="font-weight: bold;">B</text></view>
-          <view class="tool-btn" :class="{ active: formats.italic }" @tap="handleStemToolbar('italic')"><text style="font-style: italic;">I</text></view>
-          <view class="tool-btn" :class="{ active: formats.underline }" @tap="handleStemToolbar('underline')"><text style="text-decoration: underline;">U</text></view>
-          <view class="tool-btn" :class="{ active: formats.script === 'sub' }" @tap="handleStemToolbar('script', 'sub')">x₂</view>
-          <view class="tool-btn" :class="{ active: formats.script === 'sup' }" @tap="handleStemToolbar('script', 'sup')">x²</view>
+        <view class="toolbar" v-if="currentFocus === 'stem'">
+          <view class="tool-btn" :class="{ active: formats.bold }" @tap="handleToolbar('bold')"><text style="font-weight: bold;">B</text></view>
+          <view class="tool-btn" :class="{ active: formats.italic }" @tap="handleToolbar('italic')"><text style="font-style: italic;">I</text></view>
+          <view class="tool-btn" :class="{ active: formats.underline }" @tap="handleToolbar('underline')"><text style="text-decoration: underline;">U</text></view>
+          <view class="tool-btn" :class="{ active: formats.script === 'sub' }" @tap="handleToolbar('script', 'sub')">x₂</view>
+          <view class="tool-btn" :class="{ active: formats.script === 'sup' }" @tap="handleToolbar('script', 'sup')">x²</view>
           <uni-icons class="tool-btn" type="image" size="20" @tap="insertImage"></uni-icons>
         </view>
         <view class="editor-box">
@@ -31,8 +31,8 @@
             show-img-resize
             @ready="onStemReady"
             @statuschange="onStatusChange"
-            @focus="showStemToolbar = true"
-            @blur="showStemToolbar = false"
+            @focus="onEditorFocus('stem')"
+            @blur="onEditorBlur"
             @input="handleStemInput"
           ></editor>
         </view>
@@ -60,13 +60,28 @@
             </view>
 
             <view class="option-label">{{ item.label }}.</view>
-            <view class="input-wrap">
-              <input 
-                class="gray-input" 
-                v-model="item.text" 
-                placeholder="请输入试题选项" 
-                placeholder-style="color: #c0c4cc"
-              />
+            <view class="input-wrap-editor">
+              <view class="toolbar" v-if="currentFocus === 'option-' + index">
+                <view class="tool-btn" :class="{ active: formats.bold }" @tap="handleToolbar('bold')"><text style="font-weight: bold;">B</text></view>
+                <view class="tool-btn" :class="{ active: formats.italic }" @tap="handleToolbar('italic')"><text style="font-style: italic;">I</text></view>
+                <view class="tool-btn" :class="{ active: formats.underline }" @tap="handleToolbar('underline')"><text style="text-decoration: underline;">U</text></view>
+                <view class="tool-btn" :class="{ active: formats.script === 'sub' }" @tap="handleToolbar('script', 'sub')">x₂</view>
+                <view class="tool-btn" :class="{ active: formats.script === 'sup' }" @tap="handleToolbar('script', 'sup')">x²</view>
+                <uni-icons class="tool-btn" type="image" size="20" @tap="insertImage"></uni-icons>
+              </view>
+              <editor
+                :id="'optionEditor' + index"
+                class="ql-editor-option"
+                placeholder="请输入试题选项"
+                show-img-size
+                show-img-toolbar
+                show-img-resize
+                @ready="onOptionReady(index)"
+                @statuschange="onStatusChange"
+                @focus="onEditorFocus('option-' + index)"
+                @blur="onEditorBlur"
+                @input="(e) => handleOptionInput(e, index)"
+              ></editor>
             </view>
 
             <view class="check-wrap" @tap="toggleAnswer(item.label)">
@@ -111,14 +126,28 @@
         <view class="section-header">
           <text class="label">解析</text>
         </view>
+        <view class="toolbar" v-if="currentFocus === 'analysis'">
+          <view class="tool-btn" :class="{ active: formats.bold }" @tap="handleToolbar('bold')"><text style="font-weight: bold;">B</text></view>
+          <view class="tool-btn" :class="{ active: formats.italic }" @tap="handleToolbar('italic')"><text style="font-style: italic;">I</text></view>
+          <view class="tool-btn" :class="{ active: formats.underline }" @tap="handleToolbar('underline')"><text style="text-decoration: underline;">U</text></view>
+          <view class="tool-btn" :class="{ active: formats.script === 'sub' }" @tap="handleToolbar('script', 'sub')">x₂</view>
+          <view class="tool-btn" :class="{ active: formats.script === 'sup' }" @tap="handleToolbar('script', 'sup')">x²</view>
+          <uni-icons class="tool-btn" type="image" size="20" @tap="insertImage"></uni-icons>
+        </view>
         <view class="textarea-box">
-          <textarea 
-            class="gray-textarea" 
-            v-model="form.analysis" 
-            placeholder="请输入试题解析" 
-            placeholder-style="color: #c0c4cc"
-            auto-height
-          />
+          <editor
+            id="analysisEditor"
+            class="ql-editor"
+            placeholder="请输入试题解析"
+            show-img-size
+            show-img-toolbar
+            show-img-resize
+            @ready="onAnalysisReady"
+            @statuschange="onStatusChange"
+            @focus="onEditorFocus('analysis')"
+            @blur="onEditorBlur"
+            @input="handleAnalysisInput"
+          ></editor>
         </view>
       </view>
 
@@ -194,9 +223,13 @@ const instance = getCurrentInstance();
 const mode = ref('single');
 const showStemToolbar = ref(false);
 const stemEditorCtx = ref(null);
+const analysisEditorCtx = ref(null);
+const optionEditorCtxs = ref({}); // Map id to context
+const currentFocus = ref(''); // 'stem', 'analysis', 'option-0', ...
 const bulkPopup = ref(null);
 const bulkText = ref('');
 const formats = ref({});
+let blurTimer = null;
 
 // 表单数据
 const form = ref({
@@ -286,19 +319,80 @@ function handleStemInput(e) {
 function onStatusChange(e) {
   formats.value = e.detail;
 }
-function handleStemToolbar(name, value) {
-    if(stemEditorCtx.value) {
-        stemEditorCtx.value.format(name, value);
+
+// 通用工具栏处理
+function handleToolbar(name, value) {
+    let ctx = null;
+    if (currentFocus.value === 'stem') ctx = stemEditorCtx.value;
+    else if (currentFocus.value === 'analysis') ctx = analysisEditorCtx.value;
+    else if (currentFocus.value.startsWith('option-')) {
+        const idx = currentFocus.value.split('-')[1];
+        ctx = optionEditorCtxs.value[idx];
     }
+    
+    if (ctx) ctx.format(name, value);
 }
+
+// 通用插入图片
 function insertImage() {
-    if (!stemEditorCtx.value) return;
+    let ctx = null;
+    if (currentFocus.value === 'stem') ctx = stemEditorCtx.value;
+    else if (currentFocus.value === 'analysis') ctx = analysisEditorCtx.value;
+    else if (currentFocus.value.startsWith('option-')) {
+        const idx = currentFocus.value.split('-')[1];
+        ctx = optionEditorCtxs.value[idx];
+    }
+
+    if (!ctx) return;
     uni.chooseImage({
         count: 1,
         success: (res) => {
-            stemEditorCtx.value.insertImage({ src: res.tempFilePaths[0], width: '80%' });
+            ctx.insertImage({ src: res.tempFilePaths[0], width: '80%' });
         }
     });
+}
+
+// 选项编辑器
+function onOptionReady(index) {
+    uni.createSelectorQuery().in(instance).select('#optionEditor' + index).context((res) => {
+        optionEditorCtxs.value[index] = res.context;
+        // 如果有初始值，需要 setContents
+        if (form.value.options[index].text) {
+            res.context.setContents({ html: form.value.options[index].text });
+        }
+    }).exec();
+}
+function handleOptionInput(e, index) {
+    form.value.options[index].text = e.detail.html;
+}
+
+// 解析编辑器
+function onAnalysisReady() {
+     uni.createSelectorQuery().in(instance).select('#analysisEditor').context((res) => {
+        analysisEditorCtx.value = res.context;
+         if (form.value.analysis) {
+            res.context.setContents({ html: form.value.analysis });
+        }
+    }).exec();
+}
+function handleAnalysisInput(e) {
+    form.value.analysis = e.detail.html;
+}
+
+// 焦点管理
+function onEditorFocus(key) {
+    if (blurTimer) {
+        clearTimeout(blurTimer);
+        blurTimer = null;
+    }
+    currentFocus.value = key;
+}
+function onEditorBlur() {
+    // 延迟清除焦点，防止点击工具栏时焦点丢失导致工具栏隐藏
+    blurTimer = setTimeout(() => {
+        currentFocus.value = '';
+        blurTimer = null;
+    }, 200);
 }
 
 // 选项操作
@@ -521,12 +615,12 @@ function submit() {
 /* 编辑器容器 */
 .editor-box {
     background: #f5f7fa; /* 截图中的浅灰色背景 */
-    border-radius: 8rpx;
-    padding: 20rpx;
-    min-height: 200rpx;
+    border-radius: 12rpx;
+    padding: 16rpx 24rpx;
+    min-height: 80rpx;
 }
 .ql-editor {
-    min-height: 160rpx;
+    min-height: 48rpx;
     font-size: 30rpx;
     line-height: 1.6;
 }
@@ -552,17 +646,39 @@ function submit() {
     color: #333;
     margin-right: 8rpx;
 }
+.input-wrap-editor {
+    flex: 1;
+    width: 0; /* 防止被内容撑开 */
+    background: #f5f7fa;
+    border-radius: 12rpx;
+    padding: 16rpx 24rpx;
+    margin-right: 20rpx;
+    min-height: 80rpx;
+    /* 让 editor 自然流布局 */
+}
 .input-wrap {
     flex: 1;
-    background: #f5f7fa; /* 输入框背景 */
-    border-radius: 8rpx;
-    padding: 16rpx 20rpx;
+    width: 0; /* 防止被内容撑开 */
+    background: #f5f7fa;
+    border-radius: 12rpx;
+    padding: 16rpx 24rpx;
     margin-right: 20rpx;
+    min-height: 80rpx;
+    display: flex;
+    align-items: center;
 }
 .gray-input {
     font-size: 28rpx;
     color: #333;
     width: 100%;
+}
+.ql-editor-option {
+    min-height: 48rpx;
+    font-size: 28rpx;
+    line-height: 1.6;
+    width: 100%;
+    word-break: break-all;
+    white-space: pre-wrap;
 }
 /* 右侧勾选圈 */
 .check-wrap {
@@ -620,9 +736,9 @@ function submit() {
 /* 解析 */
 .textarea-box {
     background: #f5f7fa;
-    border-radius: 8rpx;
-    padding: 20rpx;
-    min-height: 120rpx;
+    border-radius: 12rpx;
+    padding: 16rpx 24rpx;
+    min-height: 80rpx;
 }
 .gray-textarea {
     width: 100%;

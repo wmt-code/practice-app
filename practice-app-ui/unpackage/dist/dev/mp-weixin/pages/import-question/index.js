@@ -28,11 +28,15 @@ const _sfc_main = {
     ];
     const instance = common_vendor.getCurrentInstance();
     const mode = common_vendor.ref("single");
-    const showStemToolbar = common_vendor.ref(false);
+    common_vendor.ref(false);
     const stemEditorCtx = common_vendor.ref(null);
+    const analysisEditorCtx = common_vendor.ref(null);
+    const optionEditorCtxs = common_vendor.ref({});
+    const currentFocus = common_vendor.ref("");
     const bulkPopup = common_vendor.ref(null);
     const bulkText = common_vendor.ref("");
     const formats = common_vendor.ref({});
+    let blurTimer = null;
     const form = common_vendor.ref({
       type: "SINGLE",
       // SINGLE, MULTIPLE, JUDGE, FILL
@@ -100,20 +104,72 @@ const _sfc_main = {
     function onStatusChange(e) {
       formats.value = e.detail;
     }
-    function handleStemToolbar(name, value) {
-      if (stemEditorCtx.value) {
-        stemEditorCtx.value.format(name, value);
+    function handleToolbar(name, value) {
+      let ctx = null;
+      if (currentFocus.value === "stem")
+        ctx = stemEditorCtx.value;
+      else if (currentFocus.value === "analysis")
+        ctx = analysisEditorCtx.value;
+      else if (currentFocus.value.startsWith("option-")) {
+        const idx = currentFocus.value.split("-")[1];
+        ctx = optionEditorCtxs.value[idx];
       }
+      if (ctx)
+        ctx.format(name, value);
     }
     function insertImage() {
-      if (!stemEditorCtx.value)
+      let ctx = null;
+      if (currentFocus.value === "stem")
+        ctx = stemEditorCtx.value;
+      else if (currentFocus.value === "analysis")
+        ctx = analysisEditorCtx.value;
+      else if (currentFocus.value.startsWith("option-")) {
+        const idx = currentFocus.value.split("-")[1];
+        ctx = optionEditorCtxs.value[idx];
+      }
+      if (!ctx)
         return;
       common_vendor.index.chooseImage({
         count: 1,
         success: (res) => {
-          stemEditorCtx.value.insertImage({ src: res.tempFilePaths[0], width: "80%" });
+          ctx.insertImage({ src: res.tempFilePaths[0], width: "80%" });
         }
       });
+    }
+    function onOptionReady(index) {
+      common_vendor.index.createSelectorQuery().in(instance).select("#optionEditor" + index).context((res) => {
+        optionEditorCtxs.value[index] = res.context;
+        if (form.value.options[index].text) {
+          res.context.setContents({ html: form.value.options[index].text });
+        }
+      }).exec();
+    }
+    function handleOptionInput(e, index) {
+      form.value.options[index].text = e.detail.html;
+    }
+    function onAnalysisReady() {
+      common_vendor.index.createSelectorQuery().in(instance).select("#analysisEditor").context((res) => {
+        analysisEditorCtx.value = res.context;
+        if (form.value.analysis) {
+          res.context.setContents({ html: form.value.analysis });
+        }
+      }).exec();
+    }
+    function handleAnalysisInput(e) {
+      form.value.analysis = e.detail.html;
+    }
+    function onEditorFocus(key) {
+      if (blurTimer) {
+        clearTimeout(blurTimer);
+        blurTimer = null;
+      }
+      currentFocus.value = key;
+    }
+    function onEditorBlur() {
+      blurTimer = setTimeout(() => {
+        currentFocus.value = "";
+        blurTimer = null;
+      }, 200);
     }
     function addOption() {
       if (optionsDisabled.value)
@@ -183,7 +239,7 @@ const _sfc_main = {
       return t ? t.text : "";
     }
     function submit() {
-      common_vendor.index.__f__("log", "at pages/import-question/index.vue:388", "Submit:", form.value);
+      common_vendor.index.__f__("log", "at pages/import-question/index.vue:482", "Submit:", form.value);
       if (!form.value.stemHtml && !form.value.stemText) {
         return common_vendor.index.showToast({ title: "请输入题干", icon: "none" });
       }
@@ -201,18 +257,18 @@ const _sfc_main = {
           color: "#c0c4cc"
         }),
         c: common_vendor.o(openTypeSelect),
-        d: showStemToolbar.value
-      }, showStemToolbar.value ? {
+        d: currentFocus.value === "stem"
+      }, currentFocus.value === "stem" ? {
         e: formats.value.bold ? 1 : "",
-        f: common_vendor.o(($event) => handleStemToolbar("bold")),
+        f: common_vendor.o(($event) => handleToolbar("bold")),
         g: formats.value.italic ? 1 : "",
-        h: common_vendor.o(($event) => handleStemToolbar("italic")),
+        h: common_vendor.o(($event) => handleToolbar("italic")),
         i: formats.value.underline ? 1 : "",
-        j: common_vendor.o(($event) => handleStemToolbar("underline")),
+        j: common_vendor.o(($event) => handleToolbar("underline")),
         k: formats.value.script === "sub" ? 1 : "",
-        l: common_vendor.o(($event) => handleStemToolbar("script", "sub")),
+        l: common_vendor.o(($event) => handleToolbar("script", "sub")),
         m: formats.value.script === "sup" ? 1 : "",
-        n: common_vendor.o(($event) => handleStemToolbar("script", "sup")),
+        n: common_vendor.o(($event) => handleToolbar("script", "sup")),
         o: common_vendor.o(insertImage),
         p: common_vendor.p({
           type: "image",
@@ -221,8 +277,8 @@ const _sfc_main = {
       } : {}, {
         q: common_vendor.o(onStemReady),
         r: common_vendor.o(onStatusChange),
-        s: common_vendor.o(($event) => showStemToolbar.value = true),
-        t: common_vendor.o(($event) => showStemToolbar.value = false),
+        s: common_vendor.o(($event) => onEditorFocus("stem")),
+        t: common_vendor.o(onEditorBlur),
         v: common_vendor.o(handleStemInput),
         w: isChoice.value
       }, isChoice.value ? {
@@ -243,13 +299,36 @@ const _sfc_main = {
             })
           }, {
             f: common_vendor.t(item.label),
-            g: item.text,
-            h: common_vendor.o(($event) => item.text = $event.detail.value, item.label),
-            i: form.value.answers.includes(item.label)
+            g: currentFocus.value === "option-" + index
+          }, currentFocus.value === "option-" + index ? {
+            h: formats.value.bold ? 1 : "",
+            i: common_vendor.o(($event) => handleToolbar("bold"), item.label),
+            j: formats.value.italic ? 1 : "",
+            k: common_vendor.o(($event) => handleToolbar("italic"), item.label),
+            l: formats.value.underline ? 1 : "",
+            m: common_vendor.o(($event) => handleToolbar("underline"), item.label),
+            n: formats.value.script === "sub" ? 1 : "",
+            o: common_vendor.o(($event) => handleToolbar("script", "sub"), item.label),
+            p: formats.value.script === "sup" ? 1 : "",
+            q: common_vendor.o(($event) => handleToolbar("script", "sup"), item.label),
+            r: common_vendor.o(insertImage, item.label),
+            s: "3e7c1569-4-" + i0,
+            t: common_vendor.p({
+              type: "image",
+              size: "20"
+            })
+          } : {}, {
+            v: "optionEditor" + index,
+            w: common_vendor.o(($event) => onOptionReady(index), item.label),
+            x: common_vendor.o(onStatusChange, item.label),
+            y: common_vendor.o(($event) => onEditorFocus("option-" + index), item.label),
+            z: common_vendor.o(onEditorBlur, item.label),
+            A: common_vendor.o((e) => handleOptionInput(e, index), item.label),
+            B: form.value.answers.includes(item.label)
           }, form.value.answers.includes(item.label) ? {} : {}, {
-            j: form.value.answers.includes(item.label) ? 1 : "",
-            k: common_vendor.o(($event) => toggleAnswer(item.label), item.label),
-            l: item.label
+            C: form.value.answers.includes(item.label) ? 1 : "",
+            D: common_vendor.o(($event) => toggleAnswer(item.label), item.label),
+            E: item.label
           });
         }),
         y: canRemoveOption.value,
@@ -270,7 +349,7 @@ const _sfc_main = {
         F: common_vendor.o(addBlank),
         G: common_vendor.f(form.value.blanks, (blank, index, i0) => {
           return common_vendor.e(form.value.blanks.length > 1 ? {
-            a: "3e7c1569-6-" + i0,
+            a: "3e7c1569-7-" + i0,
             b: common_vendor.p({
               type: "minus-filled",
               color: "#dd524d",
@@ -287,50 +366,71 @@ const _sfc_main = {
         H: form.value.blanks.length > 1
       } : {}, {
         D: form.value.type === "FILL",
-        I: form.value.analysis,
-        J: common_vendor.o(($event) => form.value.analysis = $event.detail.value),
-        K: common_vendor.p({
+        I: currentFocus.value === "analysis"
+      }, currentFocus.value === "analysis" ? {
+        J: formats.value.bold ? 1 : "",
+        K: common_vendor.o(($event) => handleToolbar("bold")),
+        L: formats.value.italic ? 1 : "",
+        M: common_vendor.o(($event) => handleToolbar("italic")),
+        N: formats.value.underline ? 1 : "",
+        O: common_vendor.o(($event) => handleToolbar("underline")),
+        P: formats.value.script === "sub" ? 1 : "",
+        Q: common_vendor.o(($event) => handleToolbar("script", "sub")),
+        R: formats.value.script === "sup" ? 1 : "",
+        S: common_vendor.o(($event) => handleToolbar("script", "sup")),
+        T: common_vendor.o(insertImage),
+        U: common_vendor.p({
+          type: "image",
+          size: "20"
+        })
+      } : {}, {
+        V: common_vendor.o(onAnalysisReady),
+        W: common_vendor.o(onStatusChange),
+        X: common_vendor.o(($event) => onEditorFocus("analysis")),
+        Y: common_vendor.o(onEditorBlur),
+        Z: common_vendor.o(handleAnalysisInput),
+        aa: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         }),
-        L: common_vendor.o(chooseCategory),
-        M: common_vendor.p({
+        ab: common_vendor.o(chooseCategory),
+        ac: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         }),
-        N: form.value.difficulty
+        ad: form.value.difficulty
       }, form.value.difficulty ? {
-        O: common_vendor.t(renderDifficulty(form.value.difficulty)),
-        P: common_vendor.p({
+        ae: common_vendor.t(renderDifficulty(form.value.difficulty)),
+        af: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         })
       } : {
-        Q: common_vendor.p({
+        ag: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         })
       }, {
-        R: common_vendor.o(openDifficulty),
-        S: common_vendor.o(submit),
-        T: bulkText.value,
-        U: common_vendor.o(($event) => bulkText.value = $event.detail.value),
-        V: common_vendor.o(applyBulkOptions),
-        W: common_vendor.o(($event) => bulkPopup.value.close()),
-        X: common_vendor.p({
+        ah: common_vendor.o(openDifficulty),
+        ai: common_vendor.o(submit),
+        aj: bulkText.value,
+        ak: common_vendor.o(($event) => bulkText.value = $event.detail.value),
+        al: common_vendor.o(applyBulkOptions),
+        am: common_vendor.o(($event) => bulkPopup.value.close()),
+        an: common_vendor.p({
           mode: "input",
           title: "批量添加选项",
           placeholder: "一行一个选项，自动填充",
           ["before-close"]: true
         }),
-        Y: common_vendor.sr(bulkPopup, "3e7c1569-11", {
+        ao: common_vendor.sr(bulkPopup, "3e7c1569-13", {
           "k": "bulkPopup"
         }),
-        Z: common_vendor.p({
+        ap: common_vendor.p({
           type: "dialog"
         })
       });
