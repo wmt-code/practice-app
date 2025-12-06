@@ -37,6 +37,35 @@ const _sfc_main = {
     const bulkText = common_vendor.ref("");
     const formats = common_vendor.ref({});
     let blurTimer = null;
+    const categoryPopup = common_vendor.ref(null);
+    const editCategoryPopup = common_vendor.ref(null);
+    const categories = common_vendor.ref([
+      {
+        id: 1,
+        name: "章节1",
+        expanded: true,
+        children: [
+          { id: 11, name: "子章节1" }
+        ]
+      },
+      {
+        id: 2,
+        name: "章节2",
+        expanded: true,
+        children: [
+          { id: 21, name: "子章节2" }
+        ]
+      },
+      {
+        id: 3,
+        name: "章节3",
+        expanded: true,
+        children: [
+          { id: 31, name: "子章节1" },
+          { id: 32, name: "子章节2" }
+        ]
+      }
+    ]);
     const form = common_vendor.ref({
       type: "SINGLE",
       // SINGLE, MULTIPLE, JUDGE, FILL
@@ -224,7 +253,105 @@ const _sfc_main = {
       form.value.blanks.splice(index, 1);
     }
     function chooseCategory() {
-      common_vendor.index.showToast({ title: "打开章节选择器", icon: "none" });
+      categoryPopup.value.open();
+    }
+    function openEditCategory() {
+      editCategoryPopup.value.open();
+    }
+    function selectCategory(item) {
+      form.value.categoryName = item.name;
+      categoryPopup.value.close();
+    }
+    function addCategory() {
+      common_vendor.index.showModal({
+        title: "添加章节",
+        editable: true,
+        placeholderText: "请输入章节名称",
+        success: (res) => {
+          if (res.confirm && res.content) {
+            categories.value.push({
+              id: Date.now(),
+              name: res.content,
+              expanded: true,
+              children: []
+            });
+          }
+        }
+      });
+    }
+    function addSubCategory(parentIndex) {
+      common_vendor.index.showModal({
+        title: "添加子章节",
+        editable: true,
+        placeholderText: "请输入子章节名称",
+        success: (res) => {
+          if (res.confirm && res.content) {
+            if (!categories.value[parentIndex].children) {
+              categories.value[parentIndex].children = [];
+            }
+            categories.value[parentIndex].children.push({
+              id: Date.now(),
+              name: res.content
+            });
+            categories.value[parentIndex].expanded = true;
+          }
+        }
+      });
+    }
+    function editCategory(item) {
+      common_vendor.index.showModal({
+        title: "修改名称",
+        editable: true,
+        content: item.name,
+        placeholderText: "请输入名称",
+        success: (res) => {
+          if (res.confirm && res.content) {
+            item.name = res.content;
+          }
+        }
+      });
+    }
+    function removeCategory(index) {
+      common_vendor.index.showModal({
+        title: "提示",
+        content: "确定要删除该章节吗？",
+        success: (res) => {
+          if (res.confirm) {
+            categories.value.splice(index, 1);
+          }
+        }
+      });
+    }
+    function removeSubCategory(parentIndex, subIndex) {
+      common_vendor.index.showModal({
+        title: "提示",
+        content: "确定要删除该子章节吗？",
+        success: (res) => {
+          if (res.confirm) {
+            categories.value[parentIndex].children.splice(subIndex, 1);
+          }
+        }
+      });
+    }
+    function moveCategory(index, direction) {
+      const newIndex = index + direction;
+      if (newIndex >= 0 && newIndex < categories.value.length) {
+        const temp = categories.value[index];
+        categories.value[index] = categories.value[newIndex];
+        categories.value[newIndex] = temp;
+      }
+    }
+    function moveSubCategory(parentIndex, subIndex, direction) {
+      const children = categories.value[parentIndex].children;
+      const newIndex = subIndex + direction;
+      if (newIndex >= 0 && newIndex < children.length) {
+        const temp = children[subIndex];
+        children[subIndex] = children[newIndex];
+        children[newIndex] = temp;
+      }
+    }
+    function toggleExpand(cat) {
+      cat.expanded = !cat.expanded;
     }
     function openDifficulty() {
       common_vendor.index.showActionSheet({
@@ -239,7 +366,7 @@ const _sfc_main = {
       return t ? t.text : "";
     }
     function submit() {
-      common_vendor.index.__f__("log", "at pages/import-question/index.vue:482", "Submit:", form.value);
+      common_vendor.index.__f__("log", "at pages/import-question/index.vue:693", "Submit:", form.value);
       if (!form.value.stemHtml && !form.value.stemText) {
         return common_vendor.index.showToast({ title: "请输入题干", icon: "none" });
       }
@@ -389,49 +516,184 @@ const _sfc_main = {
         X: common_vendor.o(($event) => onEditorFocus("analysis")),
         Y: common_vendor.o(onEditorBlur),
         Z: common_vendor.o(handleAnalysisInput),
-        aa: common_vendor.p({
-          type: "right",
-          size: "14",
-          color: "#c0c4cc"
-        }),
-        ab: common_vendor.o(chooseCategory),
+        aa: form.value.categoryName
+      }, form.value.categoryName ? {
+        ab: common_vendor.t(form.value.categoryName)
+      } : {}, {
         ac: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         }),
-        ad: form.value.difficulty
+        ad: common_vendor.o(chooseCategory),
+        ae: common_vendor.p({
+          type: "right",
+          size: "14",
+          color: "#c0c4cc"
+        }),
+        af: common_vendor.o(openEditCategory),
+        ag: form.value.difficulty
       }, form.value.difficulty ? {
-        ae: common_vendor.t(renderDifficulty(form.value.difficulty)),
-        af: common_vendor.p({
+        ah: common_vendor.t(renderDifficulty(form.value.difficulty)),
+        ai: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         })
       } : {
-        ag: common_vendor.p({
+        aj: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         })
       }, {
-        ah: common_vendor.o(openDifficulty),
-        ai: common_vendor.o(submit),
-        aj: bulkText.value,
-        ak: common_vendor.o(($event) => bulkText.value = $event.detail.value),
-        al: common_vendor.o(applyBulkOptions),
-        am: common_vendor.o(($event) => bulkPopup.value.close()),
-        an: common_vendor.p({
+        ak: common_vendor.o(openDifficulty),
+        al: common_vendor.o(submit),
+        am: bulkText.value,
+        an: common_vendor.o(($event) => bulkText.value = $event.detail.value),
+        ao: common_vendor.o(applyBulkOptions),
+        ap: common_vendor.o(($event) => bulkPopup.value.close()),
+        aq: common_vendor.p({
           mode: "input",
           title: "批量添加选项",
           placeholder: "一行一个选项，自动填充",
           ["before-close"]: true
         }),
-        ao: common_vendor.sr(bulkPopup, "3e7c1569-13", {
+        ar: common_vendor.sr(bulkPopup, "3e7c1569-13", {
           "k": "bulkPopup"
         }),
-        ap: common_vendor.p({
+        as: common_vendor.p({
           type: "dialog"
+        }),
+        at: common_vendor.o(($event) => categoryPopup.value.close()),
+        av: common_vendor.o(($event) => categoryPopup.value.close()),
+        aw: common_vendor.f(categories.value, (cat, k0, i0) => {
+          return {
+            a: common_vendor.t(cat.name),
+            b: common_vendor.o(($event) => selectCategory(cat), cat.id),
+            c: common_vendor.f(cat.children, (sub, k1, i1) => {
+              return {
+                a: common_vendor.t(sub.name),
+                b: sub.id,
+                c: common_vendor.o(($event) => selectCategory(sub), sub.id)
+              };
+            }),
+            d: cat.id
+          };
+        }),
+        ax: common_vendor.sr(categoryPopup, "3e7c1569-15", {
+          "k": "categoryPopup"
+        }),
+        ay: common_vendor.p({
+          type: "bottom",
+          ["background-color"]: "#fff"
+        }),
+        az: common_vendor.o(($event) => editCategoryPopup.value.close()),
+        aA: common_vendor.o(($event) => editCategoryPopup.value.close()),
+        aB: common_vendor.f(categories.value, (cat, index, i0) => {
+          return common_vendor.e({
+            a: common_vendor.o(($event) => removeCategory(index), cat.id),
+            b: "3e7c1569-17-" + i0 + ",3e7c1569-16",
+            c: common_vendor.o(($event) => toggleExpand(cat), cat.id),
+            d: "3e7c1569-18-" + i0 + ",3e7c1569-16",
+            e: common_vendor.p({
+              type: cat.expanded ? "bottom" : "right",
+              size: "16",
+              color: "#007aff"
+            }),
+            f: common_vendor.t(cat.name),
+            g: "3e7c1569-19-" + i0 + ",3e7c1569-16",
+            h: common_vendor.o(($event) => addSubCategory(index), cat.id),
+            i: "3e7c1569-20-" + i0 + ",3e7c1569-16",
+            j: common_vendor.o(($event) => editCategory(cat), cat.id),
+            k: index > 0
+          }, index > 0 ? {
+            l: common_vendor.o(($event) => moveCategory(index, -1), cat.id),
+            m: "3e7c1569-21-" + i0 + ",3e7c1569-16",
+            n: common_vendor.p({
+              type: "arrowup",
+              size: "20",
+              color: "#007aff"
+            })
+          } : {}, {
+            o: index < categories.value.length - 1
+          }, index < categories.value.length - 1 ? {
+            p: common_vendor.o(($event) => moveCategory(index, 1), cat.id),
+            q: "3e7c1569-22-" + i0 + ",3e7c1569-16",
+            r: common_vendor.p({
+              type: "arrowdown",
+              size: "20",
+              color: "#007aff"
+            })
+          } : {}, {
+            s: cat.expanded
+          }, cat.expanded ? {
+            t: common_vendor.f(cat.children, (sub, subIndex, i1) => {
+              return common_vendor.e({
+                a: common_vendor.o(($event) => removeSubCategory(index, subIndex), sub.id),
+                b: "3e7c1569-23-" + i0 + "-" + i1 + ",3e7c1569-16",
+                c: common_vendor.t(sub.name),
+                d: "3e7c1569-24-" + i0 + "-" + i1 + ",3e7c1569-16",
+                e: common_vendor.o(($event) => editCategory(sub), sub.id),
+                f: subIndex > 0
+              }, subIndex > 0 ? {
+                g: common_vendor.o(($event) => moveSubCategory(index, subIndex, -1), sub.id),
+                h: "3e7c1569-25-" + i0 + "-" + i1 + ",3e7c1569-16",
+                i: common_vendor.p({
+                  type: "arrowup",
+                  size: "20",
+                  color: "#007aff"
+                })
+              } : {}, {
+                j: subIndex < cat.children.length - 1
+              }, subIndex < cat.children.length - 1 ? {
+                k: common_vendor.o(($event) => moveSubCategory(index, subIndex, 1), sub.id),
+                l: "3e7c1569-26-" + i0 + "-" + i1 + ",3e7c1569-16",
+                m: common_vendor.p({
+                  type: "arrowdown",
+                  size: "20",
+                  color: "#007aff"
+                })
+              } : {}, {
+                n: sub.id
+              });
+            }),
+            v: common_vendor.p({
+              type: "minus-filled",
+              color: "#dd524d",
+              size: "24"
+            }),
+            w: common_vendor.p({
+              type: "compose",
+              size: "20",
+              color: "#007aff"
+            })
+          } : {}, {
+            x: cat.id
+          });
+        }),
+        aC: common_vendor.p({
+          type: "minus-filled",
+          color: "#dd524d",
+          size: "24"
+        }),
+        aD: common_vendor.p({
+          type: "plus",
+          size: "20",
+          color: "#007aff"
+        }),
+        aE: common_vendor.p({
+          type: "compose",
+          size: "20",
+          color: "#007aff"
+        }),
+        aF: common_vendor.o(addCategory),
+        aG: common_vendor.sr(editCategoryPopup, "3e7c1569-16", {
+          "k": "editCategoryPopup"
+        }),
+        aH: common_vendor.p({
+          type: "bottom",
+          ["background-color"]: "#fff"
         })
       });
     };

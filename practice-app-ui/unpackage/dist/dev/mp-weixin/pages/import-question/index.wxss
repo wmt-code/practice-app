@@ -302,3 +302,103 @@
   border-radius: 8rpx;
   font-size: 28rpx;
 }
+
+/* 底部弹窗样式 */
+.popup-container.data-v-3e7c1569 {
+  background-color: #fff;
+  border-radius: 20rpx 20rpx 0 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+.popup-header.data-v-3e7c1569 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #eee;
+}
+.title.data-v-3e7c1569 {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #333;
+}
+.cancel-btn.data-v-3e7c1569 {
+  font-size: 28rpx;
+  color: #999;
+}
+.confirm-btn.data-v-3e7c1569 {
+  font-size: 28rpx;
+  color: #007aff;
+}
+.popup-content.data-v-3e7c1569 {
+  padding: 20rpx 30rpx;
+  max-height: 60vh;
+}
+
+/* 章节列表 */
+.category-item.data-v-3e7c1569 {
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #f5f5f5;
+  font-size: 30rpx;
+  color: #333;
+}
+.sub-category-item.data-v-3e7c1569 {
+  padding: 24rpx 0 24rpx 40rpx;
+  border-bottom: 1rpx solid #f5f5f5;
+  font-size: 28rpx;
+  color: #666;
+}
+
+/* 编辑章节列表 */
+.edit-item.data-v-3e7c1569 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+.edit-item.sub-item.data-v-3e7c1569 {
+  padding-left: 40rpx;
+}
+.left-part.data-v-3e7c1569 {
+  display: flex;
+  align-items: center;
+}
+.right-actions.data-v-3e7c1569 {
+  display: flex;
+  align-items: center;
+}
+.action-box.data-v-3e7c1569 {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.ml-10.data-v-3e7c1569 {
+  margin-left: 20rpx;
+}
+.ml-20.data-v-3e7c1569 {
+  margin-left: 40rpx;
+}
+.add-category-btn.data-v-3e7c1569 {
+  margin-top: 40rpx;
+  margin-bottom: 40rpx;
+  display: flex;
+  justify-content: center;
+}
+.btn-outline.data-v-3e7c1569 {
+  background: #fff;
+  color: #007aff;
+  border: 1rpx solid #007aff;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+  padding: 0 60rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+}
+.btn-outline.data-v-3e7c1569::after {
+  border: none;
+}

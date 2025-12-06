@@ -155,10 +155,11 @@
         <view class="cell-item arrow" @tap="chooseCategory">
           <text class="label-text">选择章节</text>
           <view class="right-content">
+             <text class="value-text" v-if="form.categoryName">{{ form.categoryName }}</text>
              <uni-icons type="right" size="14" color="#c0c4cc" />
           </view>
         </view>
-        <view class="cell-item arrow">
+        <view class="cell-item arrow" @tap="openEditCategory">
           <text class="label-text">编辑章节</text>
           <uni-icons type="right" size="14" color="#c0c4cc" />
         </view>
@@ -197,6 +198,85 @@
       </uni-popup-dialog>
     </uni-popup>
 
+    <uni-popup ref="categoryPopup" type="bottom" background-color="#fff">
+      <view class="popup-container">
+        <view class="popup-header">
+          <text class="cancel-btn" @tap="categoryPopup.close()">取消</text>
+          <text class="title">选择章节</text>
+          <text class="confirm-btn" @tap="categoryPopup.close()">确定</text>
+        </view>
+        <scroll-view scroll-y class="popup-content">
+          <view v-for="cat in categories" :key="cat.id">
+            <view class="category-item" @tap="selectCategory(cat)">
+              <text>{{ cat.name }}</text>
+            </view>
+            <view class="sub-category-item" v-for="sub in cat.children" :key="sub.id" @tap="selectCategory(sub)">
+              <text>{{ sub.name }}</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+    </uni-popup>
+
+    <uni-popup ref="editCategoryPopup" type="bottom" background-color="#fff">
+      <view class="popup-container">
+        <view class="popup-header">
+          <text class="cancel-btn" @tap="editCategoryPopup.close()">取消</text>
+          <text class="title">编辑章节</text>
+          <text class="confirm-btn" @tap="editCategoryPopup.close()">确定</text>
+        </view>
+        <scroll-view scroll-y class="popup-content">
+          <view v-for="(cat, index) in categories" :key="cat.id">
+            <view class="edit-item">
+              <view class="left-part">
+                 <uni-icons type="minus-filled" color="#dd524d" size="24" @tap="removeCategory(index)" />
+                 <uni-icons :type="cat.expanded ? 'bottom' : 'right'" size="16" color="#007aff" class="ml-10" @tap="toggleExpand(cat)" />
+                 <text class="ml-10">{{ cat.name }}</text>
+              </view>
+              <view class="right-actions">
+                 <view class="action-box" @tap="addSubCategory(index)">
+                    <uni-icons type="plus" size="20" color="#007aff" />
+                 </view>
+                 <view class="action-box" @tap="editCategory(cat)">
+                    <uni-icons type="compose" size="20" color="#007aff" />
+                 </view>
+                 <view class="action-box">
+                    <uni-icons v-if="index > 0" type="arrowup" size="20" color="#007aff" @tap="moveCategory(index, -1)" />
+                 </view>
+                 <view class="action-box">
+                    <uni-icons v-if="index < categories.length - 1" type="arrowdown" size="20" color="#007aff" @tap="moveCategory(index, 1)" />
+                 </view>
+              </view>
+            </view>
+            <view v-if="cat.expanded">
+                <view class="edit-item sub-item" v-for="(sub, subIndex) in cat.children" :key="sub.id">
+                <view class="left-part">
+                    <uni-icons type="minus-filled" color="#dd524d" size="24" @tap="removeSubCategory(index, subIndex)" />
+                    <text class="ml-10">{{ sub.name }}</text>
+                </view>
+                <view class="right-actions">
+                    <view class="action-box"></view>
+                    <view class="action-box" @tap="editCategory(sub)">
+                        <uni-icons type="compose" size="20" color="#007aff" />
+                    </view>
+                    <view class="action-box">
+                        <uni-icons v-if="subIndex > 0" type="arrowup" size="20" color="#007aff" @tap="moveSubCategory(index, subIndex, -1)" />
+                    </view>
+                    <view class="action-box">
+                        <uni-icons v-if="subIndex < cat.children.length - 1" type="arrowdown" size="20" color="#007aff" @tap="moveSubCategory(index, subIndex, 1)" />
+                    </view>
+                </view>
+                </view>
+            </view>
+          </view>
+          
+          <view class="add-category-btn">
+            <button class="btn-outline" @tap="addCategory">添加章节</button>
+          </view>
+        </scroll-view>
+      </view>
+    </uni-popup>
+
   </view>
 </template>
 
@@ -230,6 +310,36 @@ const bulkPopup = ref(null);
 const bulkText = ref('');
 const formats = ref({});
 let blurTimer = null;
+
+const categoryPopup = ref(null);
+const editCategoryPopup = ref(null);
+const categories = ref([
+  {
+    id: 1,
+    name: '章节1',
+    expanded: true,
+    children: [
+      { id: 11, name: '子章节1' }
+    ]
+  },
+  {
+    id: 2,
+    name: '章节2',
+    expanded: true,
+    children: [
+      { id: 21, name: '子章节2' }
+    ]
+  },
+  {
+    id: 3,
+    name: '章节3',
+    expanded: true,
+    children: [
+      { id: 31, name: '子章节1' },
+      { id: 32, name: '子章节2' }
+    ]
+  }
+]);
 
 // 表单数据
 const form = ref({
@@ -463,8 +573,109 @@ function removeBlank(index) {
 
 // 底部选择器
 function chooseCategory() {
-  uni.showToast({ title: '打开章节选择器', icon: 'none' });
+  categoryPopup.value.open();
 }
+function openEditCategory() {
+  editCategoryPopup.value.open();
+}
+function selectCategory(item) {
+    form.value.categoryName = item.name;
+    categoryPopup.value.close();
+}
+
+// 章节编辑方法
+function addCategory() {
+    uni.showModal({
+        title: '添加章节',
+        editable: true,
+        placeholderText: '请输入章节名称',
+        success: (res) => {
+            if (res.confirm && res.content) {
+                categories.value.push({
+                    id: Date.now(),
+                    name: res.content,
+                    expanded: true,
+                    children: []
+                });
+            }
+        }
+    });
+}
+function addSubCategory(parentIndex) {
+    uni.showModal({
+        title: '添加子章节',
+        editable: true,
+        placeholderText: '请输入子章节名称',
+        success: (res) => {
+            if (res.confirm && res.content) {
+                if (!categories.value[parentIndex].children) {
+                    categories.value[parentIndex].children = [];
+                }
+                categories.value[parentIndex].children.push({
+                    id: Date.now(),
+                    name: res.content
+                });
+                categories.value[parentIndex].expanded = true;
+            }
+        }
+    });
+}
+function editCategory(item) {
+    uni.showModal({
+        title: '修改名称',
+        editable: true,
+        content: item.name,
+        placeholderText: '请输入名称',
+        success: (res) => {
+            if (res.confirm && res.content) {
+                item.name = res.content;
+            }
+        }
+    });
+}
+function removeCategory(index) {
+    uni.showModal({
+        title: '提示',
+        content: '确定要删除该章节吗？',
+        success: (res) => {
+            if (res.confirm) {
+                categories.value.splice(index, 1);
+            }
+        }
+    });
+}
+function removeSubCategory(parentIndex, subIndex) {
+    uni.showModal({
+        title: '提示',
+        content: '确定要删除该子章节吗？',
+        success: (res) => {
+            if (res.confirm) {
+                categories.value[parentIndex].children.splice(subIndex, 1);
+            }
+        }
+    });
+}
+function moveCategory(index, direction) {
+    const newIndex = index + direction;
+    if (newIndex >= 0 && newIndex < categories.value.length) {
+        const temp = categories.value[index];
+        categories.value[index] = categories.value[newIndex];
+        categories.value[newIndex] = temp;
+    }
+}
+function moveSubCategory(parentIndex, subIndex, direction) {
+    const children = categories.value[parentIndex].children;
+    const newIndex = subIndex + direction;
+    if (newIndex >= 0 && newIndex < children.length) {
+        const temp = children[subIndex];
+        children[subIndex] = children[newIndex];
+        children[newIndex] = temp;
+    }
+}
+function toggleExpand(cat) {
+    cat.expanded = !cat.expanded;
+}
+
 function openDifficulty() {
   uni.showActionSheet({
     itemList: difficultyOptions.map(d => d.text),
@@ -786,5 +997,105 @@ function submit() {
     padding: 10rpx;
     border-radius: 8rpx;
     font-size: 28rpx;
+}
+
+/* 底部弹窗样式 */
+.popup-container {
+    background-color: #fff;
+    border-radius: 20rpx 20rpx 0 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh;
+}
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 30rpx;
+    border-bottom: 1rpx solid #eee;
+}
+.title {
+    font-size: 32rpx;
+    font-weight: 500;
+    color: #333;
+}
+.cancel-btn {
+    font-size: 28rpx;
+    color: #999;
+}
+.confirm-btn {
+    font-size: 28rpx;
+    color: #007aff;
+}
+.popup-content {
+    padding: 20rpx 30rpx;
+    max-height: 60vh;
+}
+
+/* 章节列表 */
+.category-item {
+    padding: 24rpx 0;
+    border-bottom: 1rpx solid #f5f5f5;
+    font-size: 30rpx;
+    color: #333;
+}
+.sub-category-item {
+    padding: 24rpx 0 24rpx 40rpx;
+    border-bottom: 1rpx solid #f5f5f5;
+    font-size: 28rpx;
+    color: #666;
+}
+
+/* 编辑章节列表 */
+.edit-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20rpx 0;
+    border-bottom: 1rpx solid #f5f5f5;
+}
+.edit-item.sub-item {
+    padding-left: 40rpx;
+}
+.left-part {
+    display: flex;
+    align-items: center;
+}
+.right-actions {
+    display: flex;
+    align-items: center;
+}
+.action-box {
+    width: 60rpx;
+    height: 60rpx;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.ml-10 {
+    margin-left: 20rpx;
+}
+.ml-20 {
+    margin-left: 40rpx;
+}
+.add-category-btn {
+    margin-top: 40rpx;
+    margin-bottom: 40rpx;
+    display: flex;
+    justify-content: center;
+}
+.btn-outline {
+    background: #fff;
+    color: #007aff;
+    border: 1rpx solid #007aff;
+    border-radius: 44rpx;
+    font-size: 30rpx;
+    padding: 0 60rpx;
+    height: 72rpx;
+    line-height: 72rpx;
+}
+.btn-outline::after {
+    border: none;
 }
 </style>
