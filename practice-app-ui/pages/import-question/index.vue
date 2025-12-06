@@ -52,15 +52,17 @@
             v-for="(item, index) in form.options" 
             :key="item.label"
           >
-            <view class="icon-wrap" @tap="removeOption(index)" v-if="canRemoveOption">
+            <view class="icon-wrap" @tap="removeOption(index)" v-if="canRemoveOption && form.type !== 'JUDGE'">
               <uni-icons type="minus-filled" color="#dd524d" size="24" />
             </view>
-            <view class="icon-wrap" v-else style="opacity: 0;">
+            <view class="icon-wrap" v-else-if="form.type !== 'JUDGE'" style="opacity: 0;">
                <uni-icons type="minus-filled" size="24" />
             </view>
 
-            <view class="option-label">{{ item.label }}.</view>
-            <view class="input-wrap-editor">
+            <view class="option-label" v-if="form.type !== 'JUDGE'">{{ item.label }}.</view>
+            
+            <!-- 普通题型：富文本编辑器 -->
+            <view class="input-wrap-editor" v-if="form.type !== 'JUDGE'">
               <view class="toolbar" v-if="currentFocus === 'option-' + index">
                 <view class="tool-btn" :class="{ active: formats.bold }" @tap="handleToolbar('bold')"><text style="font-weight: bold;">B</text></view>
                 <view class="tool-btn" :class="{ active: formats.italic }" @tap="handleToolbar('italic')"><text style="font-style: italic;">I</text></view>
@@ -84,6 +86,11 @@
               ></editor>
             </view>
 
+            <!-- 判断题：纯文本展示 -->
+            <view class="judge-text-wrap" v-else>
+              <text class="judge-text">{{ item.text }}</text>
+            </view>
+
             <view class="check-wrap" @tap="toggleAnswer(item.label)">
               <view class="radio-circle" :class="{ active: form.answers.includes(item.label) }">
                 <view class="inner-dot" v-if="form.answers.includes(item.label)"></view>
@@ -92,7 +99,7 @@
           </view>
         </view>
 
-        <view class="add-row">
+        <view class="add-row" v-if="form.type !== 'JUDGE'">
           <view class="add-btn" @tap="addOption" :class="{ disabled: optionsDisabled }">
             <uni-icons type="plus-filled" color="#007aff" size="22" />
             <text class="add-text">添加选项</text>
@@ -287,6 +294,7 @@ import { computed, nextTick, ref, getCurrentInstance } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { fetchCategoryTree, createCategory, updateCategory, deleteCategory } from '@/api/categories.js';
 import { createQuestion, updateQuestion, fetchQuestionRaw, uploadQuestionImage } from '@/api/questions.js';
+import { API_BASE } from '@/api/http.js';
 
 // 基础数据
 const questionTypes = [
@@ -514,13 +522,11 @@ function handleToolbar(name, value) {
 // 通用插入图片
 function insertImage() {
     let ctx = null;
-    let isOption = false;
     if (currentFocus.value === 'stem') ctx = stemEditorCtx.value;
     else if (currentFocus.value === 'analysis') ctx = analysisEditorCtx.value;
     else if (currentFocus.value.startsWith('option-')) {
         const idx = currentFocus.value.split('-')[1];
         ctx = optionEditorCtxs.value[idx];
-        isOption = true;
     }
 
     if (!ctx) return;
@@ -528,20 +534,60 @@ function insertImage() {
         count: 1,
         success: async (res) => {
             const localPath = res.tempFilePaths[0];
-            if (!isOption) {
-                ctx.insertImage({ src: localPath, width: '80%' });
-                return;
-            }
+            
             try {
+                uni.showLoading({ title: '上传中...' });
+                // 尝试上传图片
                 const url = await uploadQuestionImage(localPath);
-                ctx.insertImage({ src: url, width: '80%' });
-                const idx = currentFocus.value.split('-')[1];
-                if (form.value.options[idx]) {
-                    form.value.options[idx].images = Array.from(new Set([...(form.value.options[idx].images || []), url]));
+                uni.hideLoading();
+                
+                // 拼接完整 URL (如果返回的是相对路径)
+                const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+
+                // 插入上传后的图片 URL
+                ctx.insertImage({ src: fullUrl, width: '80%', alt: 'image' });
+
+                // 如果是选项，记录图片地址（保留原有逻辑）
+                if (currentFocus.value.startsWith('option-')) {
+                    const idx = currentFocus.value.split('-')[1];
+                    if (form.value.options[idx]) {
+                        form.value.options[idx].images = Array.from(new Set([...(form.value.options[idx].images || []), fullUrl]));
+                    }
                 }
-            } catch (err) {
-                console.error('upload image failed', err);
-                uni.showToast({ title: err.message || '上传失败', icon: 'none' });
+            } catch (e) {
+                uni.hideLoading();
+                console.error('上传失败，尝试使用Base64/本地路径', e);
+                
+                // 降级处理：转 Base64 或使用本地路径
+                if (uni.getFileSystemManager) {
+                    // 小程序/App
+                    uni.getFileSystemManager().readFile({
+                        filePath: localPath,
+                        encoding: 'base64',
+                        success: (fileRes) => {
+                            let format = 'jpeg';
+                            const lower = localPath.toLowerCase();
+                            if (lower.endsWith('.png')) format = 'png';
+                            else if (lower.endsWith('.gif')) format = 'gif';
+                            const base64 = `data:image/${format};base64,${fileRes.data}`;
+                            ctx.insertImage({ src: base64, width: '80%', alt: 'image' });
+                        },
+                        fail: () => {
+                            ctx.insertImage({ src: localPath, width: '80%', alt: 'image' });
+                        }
+                    });
+                } else {
+                    // H5
+                    if (res.tempFiles && res.tempFiles[0] && typeof FileReader !== 'undefined') {
+                        const reader = new FileReader();
+                        reader.onload = (evt) => {
+                            ctx.insertImage({ src: evt.target.result, width: '80%', alt: 'image' });
+                        };
+                        reader.readAsDataURL(res.tempFiles[0]);
+                    } else {
+                        ctx.insertImage({ src: localPath, width: '80%', alt: 'image' });
+                    }
+                }
             }
         }
     });
@@ -982,6 +1028,24 @@ function buildPayload() {
   return payload;
 }
 
+function resetForm() {
+  questionId.value = null;
+  form.value.stemHtml = '';
+  form.value.analysis = '';
+  form.value.answers = [];
+  form.value.blanks = [{ id: Date.now(), text: '' }];
+  
+  if (form.value.type === 'JUDGE') {
+    form.value.options = [
+      { label: 'A', text: '正确', images: [] },
+      { label: 'B', text: '错误', images: [] },
+    ];
+  } else {
+    form.value.options = createDefaultOptions(4);
+  }
+  restoreEditorContents();
+}
+
 async function submit() {
   const payload = buildPayload();
   if (!payload || saving.value) return;
@@ -991,11 +1055,9 @@ async function submit() {
       await updateQuestion(questionId.value, payload);
       uni.showToast({ title: '更新成功', icon: 'success' });
     } else {
-      const res = await createQuestion(payload);
-      if (res && res.id) {
-        questionId.value = res.id;
-      }
+      await createQuestion(payload);
       uni.showToast({ title: '添加成功', icon: 'success' });
+      resetForm();
     }
   } catch (err) {
     console.error(err);
@@ -1171,6 +1233,17 @@ async function submit() {
     margin-right: 20rpx;
     min-height: 80rpx;
     /* 让 editor 自然流布局 */
+}
+.judge-text-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-height: 80rpx;
+    padding: 0 24rpx;
+}
+.judge-text {
+    font-size: 30rpx;
+    color: #333;
 }
 .input-wrap {
     flex: 1;

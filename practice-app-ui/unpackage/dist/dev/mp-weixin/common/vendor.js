@@ -8314,4 +8314,5 @@ exports.s = s;
 exports.sr = sr;
 exports.t = t;
 exports.watch = watch;
+exports.wx$1 = wx$1;
 //# sourceMappingURL=../../.sourcemap/mp-weixin/common/vendor.js.map

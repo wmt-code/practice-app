@@ -39,18 +39,39 @@
             <view class="question-index">第 {{ idx + 1 }} 题</view>
           </view>
 
-          <view class="question-title">{{ item.title }}</view>
+          <view class="question-title">
+            <mp-html :content="item.title" />
+          </view>
 
           <view v-if="isMultiple(item.type)" class="options">
             <checkbox-group @change="onMultipleChange">
               <label v-for="opt in item.options" :key="opt.value" class="option">
-                <checkbox
-                  :value="opt.value"
-                  :checked="currentSelected.includes(opt.value)"
-                  color="#2563eb"
-                  style="transform: scale(0.9);"
-                />
-                <text class="opt-text">{{ opt.value }}. {{ opt.text }}</text>
+                <view class="opt-row">
+                  <checkbox
+                    :value="opt.value"
+                    :checked="currentSelected.includes(opt.value)"
+                    color="#2563eb"
+                    style="transform: scale(0.9);"
+                  />
+                  <view class="opt-content">
+                    <view class="opt-text-row">
+                      <text class="opt-char">{{ opt.value }}.</text>
+                      <view class="opt-rich-text">
+                        <mp-html :content="opt.text" />
+                      </view>
+                    </view>
+                    <view v-if="opt.images && opt.images.length" class="opt-images">
+                      <image
+                        v-for="(img, imgIdx) in opt.images"
+                        :key="imgIdx"
+                        :src="img"
+                        mode="widthFix"
+                        class="opt-image"
+                        @tap.stop="previewImage(img)"
+                      />
+                    </view>
+                  </view>
+                </view>
               </label>
             </checkbox-group>
           </view>
@@ -66,13 +87,32 @@
           <view v-else class="options">
             <radio-group @change="onSingleChange">
               <label v-for="opt in item.options" :key="opt.value" class="option">
-                <radio
-                  :value="opt.value"
-                  :checked="currentSelected.includes(opt.value)"
-                  color="#2563eb"
-                  style="transform: scale(0.9);"
-                />
-                <text class="opt-text">{{ opt.value }}. {{ opt.text }}</text>
+                <view class="opt-row">
+                  <radio
+                    :value="opt.value"
+                    :checked="currentSelected.includes(opt.value)"
+                    color="#2563eb"
+                    style="transform: scale(0.9);"
+                  />
+                  <view class="opt-content">
+                    <view class="opt-text-row">
+                      <text class="opt-char">{{ opt.value }}.</text>
+                      <view class="opt-rich-text">
+                        <mp-html :content="opt.text" />
+                      </view>
+                    </view>
+                    <view v-if="opt.images && opt.images.length" class="opt-images">
+                      <image
+                        v-for="(img, imgIdx) in opt.images"
+                        :key="imgIdx"
+                        :src="img"
+                        mode="widthFix"
+                        class="opt-image"
+                        @tap.stop="previewImage(img)"
+                      />
+                    </view>
+                  </view>
+                </view>
               </label>
             </radio-group>
           </view>
@@ -116,7 +156,9 @@
             </view>
             <view class="explain">
               <text class="muted">解析：</text>
-              <text>{{ currentExplanation }}</text>
+              <view class="explain-content">
+                <mp-html :content="currentExplanation" />
+              </view>
             </view>
             <view v-if="!currentFeedback.isCorrect" class="swipe-tip">
               左滑切换下一题
@@ -199,6 +241,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
+import mpHtml from '@/uni_modules/mp-html/components/mp-html/mp-html.vue';
 import { fetchPracticeRandom, fetchPracticeSequence, fetchQuestionDetail } from '@/api/questions.js';
 import { submitAnswer as submitAnswerApi, fetchAnswerHistory, clearAnswerHistory } from '@/api/answers.js';
 import { fetchCategoryTree, flattenCategoryTree } from '@/api/categories.js';
@@ -234,6 +277,13 @@ const stats = reactive({
 });
 const resultShown = ref(false);
 const cardPopup = ref(null);
+
+const previewImage = (url) => {
+  if (!url) return;
+  uni.previewImage({
+    urls: [url],
+  });
+};
 
 const currentQuestionId = computed(() => questions.value[currentIndex.value]?.id);
 const currentQuestion = computed(() => questions.value[currentIndex.value] || {});
@@ -1151,5 +1201,57 @@ onLoad((options) => {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   color: #ffffff;
   border: none;
+}
+
+.opt-row {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.opt-content {
+  flex: 1;
+  margin-left: 12rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.opt-text-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.opt-char {
+  font-size: 28rpx;
+  color: #1f2937;
+  margin-right: 8rpx;
+  white-space: nowrap;
+}
+
+.opt-rich-text {
+  flex: 1;
+  font-size: 28rpx;
+  color: #1f2937;
+  line-height: 1.5;
+}
+
+.opt-images {
+  margin-top: 10rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+}
+
+.opt-image {
+  width: 200rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid #e5e7eb;
+}
+
+.explain-content {
+  margin-top: 4rpx;
+  font-size: 28rpx;
+  color: #1f2937;
+  line-height: 1.6;
 }
 </style>

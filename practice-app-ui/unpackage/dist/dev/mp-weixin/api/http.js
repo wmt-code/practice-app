@@ -158,6 +158,7 @@ async function upload({ url, filePath, name = "file", formData = {}, header = {}
     });
   });
 }
+exports.API_BASE = API_BASE;
 exports.getStoredUser = getStoredUser;
 exports.request = request;
 exports.setStoredUser = setStoredUser;

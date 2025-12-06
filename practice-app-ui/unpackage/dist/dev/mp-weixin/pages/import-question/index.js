@@ -2,6 +2,7 @@
 const common_vendor = require("../../common/vendor.js");
 const api_categories = require("../../api/categories.js");
 const api_questions = require("../../api/questions.js");
+const api_http = require("../../api/http.js");
 if (!Array) {
   const _easycom_uni_icons2 = common_vendor.resolveComponent("uni-icons");
   const _easycom_uni_popup_dialog2 = common_vendor.resolveComponent("uni-popup-dialog");
@@ -83,7 +84,7 @@ const _sfc_main = {
           await loadQuestionDetail(questionId.value);
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/import-question/index.vue:367", err);
+        common_vendor.index.__f__("error", "at pages/import-question/index.vue:375", err);
         common_vendor.index.showToast({ title: err.message || "初始化失败", icon: "none" });
       } finally {
         loading.value = false;
@@ -102,7 +103,7 @@ const _sfc_main = {
           form.value.categoryName = findCategoryName(categories.value, form.value.categoryId);
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/import-question/index.vue:388", "load categories failed", err);
+        common_vendor.index.__f__("error", "at pages/import-question/index.vue:396", "load categories failed", err);
         common_vendor.index.showToast({ title: "加载章节失败", icon: "none" });
       }
     }
@@ -174,7 +175,7 @@ const _sfc_main = {
         }
         restoreEditorContents();
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/import-question/index.vue:479", "load question failed", err);
+        common_vendor.index.__f__("error", "at pages/import-question/index.vue:487", "load question failed", err);
         common_vendor.index.showToast({ title: err.message || "加载题目失败", icon: "none" });
       }
     }
@@ -207,7 +208,6 @@ const _sfc_main = {
     }
     function insertImage() {
       let ctx = null;
-      let isOption = false;
       if (currentFocus.value === "stem")
         ctx = stemEditorCtx.value;
       else if (currentFocus.value === "analysis")
@@ -215,7 +215,6 @@ const _sfc_main = {
       else if (currentFocus.value.startsWith("option-")) {
         const idx = currentFocus.value.split("-")[1];
         ctx = optionEditorCtxs.value[idx];
-        isOption = true;
       }
       if (!ctx)
         return;
@@ -223,20 +222,50 @@ const _sfc_main = {
         count: 1,
         success: async (res) => {
           const localPath = res.tempFilePaths[0];
-          if (!isOption) {
-            ctx.insertImage({ src: localPath, width: "80%" });
-            return;
-          }
           try {
+            common_vendor.index.showLoading({ title: "上传中..." });
             const url = await api_questions.uploadQuestionImage(localPath);
-            ctx.insertImage({ src: url, width: "80%" });
-            const idx = currentFocus.value.split("-")[1];
-            if (form.value.options[idx]) {
-              form.value.options[idx].images = Array.from(/* @__PURE__ */ new Set([...form.value.options[idx].images || [], url]));
+            common_vendor.index.hideLoading();
+            const fullUrl = url.startsWith("http") ? url : `${api_http.API_BASE}${url.startsWith("/") ? "" : "/"}${url}`;
+            ctx.insertImage({ src: fullUrl, width: "80%", alt: "image" });
+            if (currentFocus.value.startsWith("option-")) {
+              const idx = currentFocus.value.split("-")[1];
+              if (form.value.options[idx]) {
+                form.value.options[idx].images = Array.from(/* @__PURE__ */ new Set([...form.value.options[idx].images || [], fullUrl]));
+              }
             }
-          } catch (err) {
-            common_vendor.index.__f__("error", "at pages/import-question/index.vue:543", "upload image failed", err);
-            common_vendor.index.showToast({ title: err.message || "上传失败", icon: "none" });
+          } catch (e) {
+            common_vendor.index.hideLoading();
+            common_vendor.index.__f__("error", "at pages/import-question/index.vue:559", "上传失败，尝试使用Base64/本地路径", e);
+            if (common_vendor.index.getFileSystemManager) {
+              common_vendor.index.getFileSystemManager().readFile({
+                filePath: localPath,
+                encoding: "base64",
+                success: (fileRes) => {
+                  let format = "jpeg";
+                  const lower = localPath.toLowerCase();
+                  if (lower.endsWith(".png"))
+                    format = "png";
+                  else if (lower.endsWith(".gif"))
+                    format = "gif";
+                  const base64 = `data:image/${format};base64,${fileRes.data}`;
+                  ctx.insertImage({ src: base64, width: "80%", alt: "image" });
+                },
+                fail: () => {
+                  ctx.insertImage({ src: localPath, width: "80%", alt: "image" });
+                }
+              });
+            } else {
+              if (res.tempFiles && res.tempFiles[0] && typeof FileReader !== "undefined") {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                  ctx.insertImage({ src: evt.target.result, width: "80%", alt: "image" });
+                };
+                reader.readAsDataURL(res.tempFiles[0]);
+              } else {
+                ctx.insertImage({ src: localPath, width: "80%", alt: "image" });
+              }
+            }
           }
         }
       });
@@ -359,7 +388,7 @@ const _sfc_main = {
               await loadCategories();
               common_vendor.index.showToast({ title: "创建成功", icon: "success" });
             } catch (err) {
-              common_vendor.index.__f__("error", "at pages/import-question/index.vue:693", err);
+              common_vendor.index.__f__("error", "at pages/import-question/index.vue:739", err);
               common_vendor.index.showToast({ title: err.message || "创建失败", icon: "none" });
             }
           }
@@ -380,7 +409,7 @@ const _sfc_main = {
               categories.value[parentIndex].expanded = true;
               common_vendor.index.showToast({ title: "创建成功", icon: "success" });
             } catch (err) {
-              common_vendor.index.__f__("error", "at pages/import-question/index.vue:714", err);
+              common_vendor.index.__f__("error", "at pages/import-question/index.vue:760", err);
               common_vendor.index.showToast({ title: err.message || "创建失败", icon: "none" });
             }
           }
@@ -400,7 +429,7 @@ const _sfc_main = {
               await loadCategories();
               common_vendor.index.showToast({ title: "更新成功", icon: "success" });
             } catch (err) {
-              common_vendor.index.__f__("error", "at pages/import-question/index.vue:734", err);
+              common_vendor.index.__f__("error", "at pages/import-question/index.vue:780", err);
               common_vendor.index.showToast({ title: err.message || "更新失败", icon: "none" });
             }
           }
@@ -418,7 +447,7 @@ const _sfc_main = {
               await loadCategories();
               common_vendor.index.showToast({ title: "删除成功", icon: "success" });
             } catch (err) {
-              common_vendor.index.__f__("error", "at pages/import-question/index.vue:752", err);
+              common_vendor.index.__f__("error", "at pages/import-question/index.vue:798", err);
               common_vendor.index.showToast({ title: err.message || "删除失败", icon: "none" });
             }
           }
@@ -436,7 +465,7 @@ const _sfc_main = {
               await loadCategories();
               common_vendor.index.showToast({ title: "删除成功", icon: "success" });
             } catch (err) {
-              common_vendor.index.__f__("error", "at pages/import-question/index.vue:770", err);
+              common_vendor.index.__f__("error", "at pages/import-question/index.vue:816", err);
               common_vendor.index.showToast({ title: err.message || "删除失败", icon: "none" });
             }
           }
@@ -638,6 +667,22 @@ const _sfc_main = {
       }
       return payload;
     }
+    function resetForm() {
+      questionId.value = null;
+      form.value.stemHtml = "";
+      form.value.analysis = "";
+      form.value.answers = [];
+      form.value.blanks = [{ id: Date.now(), text: "" }];
+      if (form.value.type === "JUDGE") {
+        form.value.options = [
+          { label: "A", text: "正确", images: [] },
+          { label: "B", text: "错误", images: [] }
+        ];
+      } else {
+        form.value.options = createDefaultOptions(4);
+      }
+      restoreEditorContents();
+    }
     async function submit() {
       const payload = buildPayload();
       if (!payload || saving.value)
@@ -648,14 +693,12 @@ const _sfc_main = {
           await api_questions.updateQuestion(questionId.value, payload);
           common_vendor.index.showToast({ title: "更新成功", icon: "success" });
         } else {
-          const res = await api_questions.createQuestion(payload);
-          if (res && res.id) {
-            questionId.value = res.id;
-          }
+          await api_questions.createQuestion(payload);
           common_vendor.index.showToast({ title: "添加成功", icon: "success" });
+          resetForm();
         }
       } catch (err) {
-        common_vendor.index.__f__("error", "at pages/import-question/index.vue:1001", err);
+        common_vendor.index.__f__("error", "at pages/import-question/index.vue:1063", err);
         common_vendor.index.showToast({ title: err.message || "提交失败", icon: "none" });
       } finally {
         saving.value = false;
@@ -694,9 +737,9 @@ const _sfc_main = {
         t: common_vendor.o(onEditorBlur),
         v: common_vendor.o(handleStemInput),
         w: isChoice.value
-      }, isChoice.value ? {
+      }, isChoice.value ? common_vendor.e({
         x: common_vendor.f(form.value.options, (item, index, i0) => {
-          return common_vendor.e(canRemoveOption.value ? {
+          return common_vendor.e(canRemoveOption.value && form.value.type !== "JUDGE" ? {
             a: "3e7c1569-2-" + i0,
             b: common_vendor.p({
               type: "minus-filled",
@@ -704,14 +747,15 @@ const _sfc_main = {
               size: "24"
             }),
             c: common_vendor.o(($event) => removeOption(index), item.label)
-          } : {
+          } : form.value.type !== "JUDGE" ? {
             d: "3e7c1569-3-" + i0,
             e: common_vendor.p({
               type: "minus-filled",
               size: "24"
             })
-          }, {
-            f: common_vendor.t(item.label),
+          } : {}, form.value.type !== "JUDGE" ? {
+            f: common_vendor.t(item.label)
+          } : {}, form.value.type !== "JUDGE" ? common_vendor.e({
             g: currentFocus.value === "option-" + index
           }, currentFocus.value === "option-" + index ? {
             h: formats.value.bold ? 1 : "",
@@ -736,31 +780,39 @@ const _sfc_main = {
             x: common_vendor.o(onStatusChange, item.label),
             y: common_vendor.o(($event) => onEditorFocus("option-" + index), item.label),
             z: common_vendor.o(onEditorBlur, item.label),
-            A: common_vendor.o((e) => handleOptionInput(e, index), item.label),
-            B: form.value.answers.includes(item.label)
+            A: common_vendor.o((e) => handleOptionInput(e, index), item.label)
+          }) : {
+            B: common_vendor.t(item.text)
+          }, {
+            C: form.value.answers.includes(item.label)
           }, form.value.answers.includes(item.label) ? {} : {}, {
-            C: form.value.answers.includes(item.label) ? 1 : "",
-            D: common_vendor.o(($event) => toggleAnswer(item.label), item.label),
-            E: item.label
+            D: form.value.answers.includes(item.label) ? 1 : "",
+            E: common_vendor.o(($event) => toggleAnswer(item.label), item.label),
+            F: item.label
           });
         }),
-        y: canRemoveOption.value,
-        z: common_vendor.p({
+        y: canRemoveOption.value && form.value.type !== "JUDGE",
+        z: form.value.type !== "JUDGE",
+        A: form.value.type !== "JUDGE",
+        B: form.value.type !== "JUDGE",
+        C: form.value.type !== "JUDGE"
+      }, form.value.type !== "JUDGE" ? {
+        D: common_vendor.p({
           type: "plus-filled",
           color: "#007aff",
           size: "22"
         }),
-        A: common_vendor.o(addOption),
-        B: optionsDisabled.value ? 1 : "",
-        C: common_vendor.o(openBulkPopup)
-      } : form.value.type === "FILL" ? {
-        E: common_vendor.p({
+        E: common_vendor.o(addOption),
+        F: optionsDisabled.value ? 1 : "",
+        G: common_vendor.o(openBulkPopup)
+      } : {}) : form.value.type === "FILL" ? {
+        I: common_vendor.p({
           type: "plus-filled",
           color: "#007aff",
           size: "20"
         }),
-        F: common_vendor.o(addBlank),
-        G: common_vendor.f(form.value.blanks, (blank, index, i0) => {
+        J: common_vendor.o(addBlank),
+        K: common_vendor.f(form.value.blanks, (blank, index, i0) => {
           return common_vendor.e(form.value.blanks.length > 1 ? {
             a: "3e7c1569-7-" + i0,
             b: common_vendor.p({
@@ -776,87 +828,87 @@ const _sfc_main = {
             g: blank.id
           });
         }),
-        H: form.value.blanks.length > 1
+        L: form.value.blanks.length > 1
       } : {}, {
-        D: form.value.type === "FILL",
-        I: currentFocus.value === "analysis"
+        H: form.value.type === "FILL",
+        M: currentFocus.value === "analysis"
       }, currentFocus.value === "analysis" ? {
-        J: formats.value.bold ? 1 : "",
-        K: common_vendor.o(($event) => handleToolbar("bold")),
-        L: formats.value.italic ? 1 : "",
-        M: common_vendor.o(($event) => handleToolbar("italic")),
-        N: formats.value.underline ? 1 : "",
-        O: common_vendor.o(($event) => handleToolbar("underline")),
-        P: formats.value.script === "sub" ? 1 : "",
-        Q: common_vendor.o(($event) => handleToolbar("script", "sub")),
-        R: formats.value.script === "sup" ? 1 : "",
-        S: common_vendor.o(($event) => handleToolbar("script", "sup")),
-        T: common_vendor.o(insertImage),
-        U: common_vendor.p({
+        N: formats.value.bold ? 1 : "",
+        O: common_vendor.o(($event) => handleToolbar("bold")),
+        P: formats.value.italic ? 1 : "",
+        Q: common_vendor.o(($event) => handleToolbar("italic")),
+        R: formats.value.underline ? 1 : "",
+        S: common_vendor.o(($event) => handleToolbar("underline")),
+        T: formats.value.script === "sub" ? 1 : "",
+        U: common_vendor.o(($event) => handleToolbar("script", "sub")),
+        V: formats.value.script === "sup" ? 1 : "",
+        W: common_vendor.o(($event) => handleToolbar("script", "sup")),
+        X: common_vendor.o(insertImage),
+        Y: common_vendor.p({
           type: "image",
           size: "20"
         })
       } : {}, {
-        V: common_vendor.o(onAnalysisReady),
-        W: common_vendor.o(onStatusChange),
-        X: common_vendor.o(($event) => onEditorFocus("analysis")),
-        Y: common_vendor.o(onEditorBlur),
-        Z: common_vendor.o(handleAnalysisInput),
-        aa: form.value.categoryName
+        Z: common_vendor.o(onAnalysisReady),
+        aa: common_vendor.o(onStatusChange),
+        ab: common_vendor.o(($event) => onEditorFocus("analysis")),
+        ac: common_vendor.o(onEditorBlur),
+        ad: common_vendor.o(handleAnalysisInput),
+        ae: form.value.categoryName
       }, form.value.categoryName ? {
-        ab: common_vendor.t(form.value.categoryName)
+        af: common_vendor.t(form.value.categoryName)
       } : {}, {
-        ac: common_vendor.p({
+        ag: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         }),
-        ad: common_vendor.o(chooseCategory),
-        ae: common_vendor.p({
-          type: "right",
-          size: "14",
-          color: "#c0c4cc"
-        }),
-        af: common_vendor.o(openEditCategory),
-        ag: form.value.difficulty
-      }, form.value.difficulty ? {
-        ah: common_vendor.t(renderDifficulty(form.value.difficulty)),
+        ah: common_vendor.o(chooseCategory),
         ai: common_vendor.p({
+          type: "right",
+          size: "14",
+          color: "#c0c4cc"
+        }),
+        aj: common_vendor.o(openEditCategory),
+        ak: form.value.difficulty
+      }, form.value.difficulty ? {
+        al: common_vendor.t(renderDifficulty(form.value.difficulty)),
+        am: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         })
       } : {
-        aj: common_vendor.p({
+        an: common_vendor.p({
           type: "right",
           size: "14",
           color: "#c0c4cc"
         })
       }, {
-        ak: common_vendor.o(openDifficulty),
-        al: common_vendor.t(submitText.value),
-        am: saving.value,
-        an: saving.value || loading.value,
-        ao: common_vendor.o(submit),
-        ap: bulkText.value,
-        aq: common_vendor.o(($event) => bulkText.value = $event.detail.value),
-        ar: common_vendor.o(applyBulkOptions),
-        as: common_vendor.o(($event) => bulkPopup.value.close()),
-        at: common_vendor.p({
+        ao: common_vendor.o(openDifficulty),
+        ap: common_vendor.t(submitText.value),
+        aq: saving.value,
+        ar: saving.value || loading.value,
+        as: common_vendor.o(submit),
+        at: bulkText.value,
+        av: common_vendor.o(($event) => bulkText.value = $event.detail.value),
+        aw: common_vendor.o(applyBulkOptions),
+        ax: common_vendor.o(($event) => bulkPopup.value.close()),
+        ay: common_vendor.p({
           mode: "input",
           title: "批量添加选项",
           placeholder: "一行一个选项，自动填充",
           ["before-close"]: true
         }),
-        av: common_vendor.sr(bulkPopup, "3e7c1569-13", {
+        az: common_vendor.sr(bulkPopup, "3e7c1569-13", {
           "k": "bulkPopup"
         }),
-        aw: common_vendor.p({
+        aA: common_vendor.p({
           type: "dialog"
         }),
-        ax: common_vendor.o(($event) => categoryPopup.value.close()),
-        ay: common_vendor.o(($event) => categoryPopup.value.close()),
-        az: common_vendor.f(categories.value, (cat, k0, i0) => {
+        aB: common_vendor.o(($event) => categoryPopup.value.close()),
+        aC: common_vendor.o(($event) => categoryPopup.value.close()),
+        aD: common_vendor.f(categories.value, (cat, k0, i0) => {
           return {
             a: common_vendor.t(cat.name),
             b: common_vendor.o(($event) => selectCategory(cat), cat.id),
@@ -870,16 +922,16 @@ const _sfc_main = {
             d: cat.id
           };
         }),
-        aA: common_vendor.sr(categoryPopup, "3e7c1569-15", {
+        aE: common_vendor.sr(categoryPopup, "3e7c1569-15", {
           "k": "categoryPopup"
         }),
-        aB: common_vendor.p({
+        aF: common_vendor.p({
           type: "bottom",
           ["background-color"]: "#fff"
         }),
-        aC: common_vendor.o(($event) => editCategoryPopup.value.close()),
-        aD: common_vendor.o(($event) => editCategoryPopup.value.close()),
-        aE: common_vendor.f(categories.value, (cat, index, i0) => {
+        aG: common_vendor.o(($event) => editCategoryPopup.value.close()),
+        aH: common_vendor.o(($event) => editCategoryPopup.value.close()),
+        aI: common_vendor.f(categories.value, (cat, index, i0) => {
           return common_vendor.e({
             a: common_vendor.o(($event) => removeCategory(index), cat.id),
             b: "3e7c1569-17-" + i0 + ",3e7c1569-16",
@@ -961,26 +1013,26 @@ const _sfc_main = {
             x: cat.id
           });
         }),
-        aF: common_vendor.p({
+        aJ: common_vendor.p({
           type: "minus-filled",
           color: "#dd524d",
           size: "24"
         }),
-        aG: common_vendor.p({
+        aK: common_vendor.p({
           type: "plus",
           size: "20",
           color: "#007aff"
         }),
-        aH: common_vendor.p({
+        aL: common_vendor.p({
           type: "compose",
           size: "20",
           color: "#007aff"
         }),
-        aI: common_vendor.o(addCategory),
-        aJ: common_vendor.sr(editCategoryPopup, "3e7c1569-16", {
+        aM: common_vendor.o(addCategory),
+        aN: common_vendor.sr(editCategoryPopup, "3e7c1569-16", {
           "k": "editCategoryPopup"
         }),
-        aK: common_vendor.p({
+        aO: common_vendor.p({
           type: "bottom",
           ["background-color"]: "#fff"
         })
