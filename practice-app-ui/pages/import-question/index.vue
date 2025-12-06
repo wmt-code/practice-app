@@ -171,7 +171,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, ref, getCurrentInstance } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 
 // 基础数据
@@ -187,6 +187,8 @@ const difficultyOptions = [
   { value: 'MEDIUM', text: '中等' },
   { value: 'HARD', text: '困难' },
 ];
+
+const instance = getCurrentInstance();
 
 const mode = ref('single');
 const showStemToolbar = ref(false);
@@ -271,7 +273,10 @@ function handleTypeChange(val) {
 
 // 题干编辑器
 function onStemReady(e) {
-  stemEditorCtx.value = e.detail.context;
+  // 尝试使用 createSelectorQuery 获取 context，以兼容更多平台
+  uni.createSelectorQuery().in(instance).select('#stemEditor').context((res) => {
+    stemEditorCtx.value = res.context;
+  }).exec();
 }
 function handleStemInput(e) {
   form.value.stemHtml = e.detail.html;
@@ -282,6 +287,7 @@ function handleStemToolbar(action) {
     }
 }
 function insertImage() {
+    if (!stemEditorCtx.value) return;
     uni.chooseImage({
         count: 1,
         success: (res) => {

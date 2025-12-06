@@ -26,6 +26,7 @@ const _sfc_main = {
       { value: "MEDIUM", text: "中等" },
       { value: "HARD", text: "困难" }
     ];
+    const instance = common_vendor.getCurrentInstance();
     const mode = common_vendor.ref("single");
     const showStemToolbar = common_vendor.ref(false);
     const stemEditorCtx = common_vendor.ref(null);
@@ -88,7 +89,9 @@ const _sfc_main = {
       }
     }
     function onStemReady(e) {
-      stemEditorCtx.value = e.detail.context;
+      common_vendor.index.createSelectorQuery().in(instance).select("#stemEditor").context((res) => {
+        stemEditorCtx.value = res.context;
+      }).exec();
     }
     function handleStemInput(e) {
       form.value.stemHtml = e.detail.html;
@@ -99,6 +102,8 @@ const _sfc_main = {
       }
     }
     function insertImage() {
+      if (!stemEditorCtx.value)
+        return;
       common_vendor.index.chooseImage({
         count: 1,
         success: (res) => {
@@ -174,7 +179,7 @@ const _sfc_main = {
       return t ? t.text : "";
     }
     function submit() {
-      common_vendor.index.__f__("log", "at pages/import-question/index.vue:377", "Submit:", form.value);
+      common_vendor.index.__f__("log", "at pages/import-question/index.vue:383", "Submit:", form.value);
       if (!form.value.stemHtml && !form.value.stemText) {
         return common_vendor.index.showToast({ title: "请输入题干", icon: "none" });
       }
